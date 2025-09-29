@@ -1,0 +1,29 @@
+mkdir 1StopInsurance
+cd 1StopInsurance
+npm init -y
+
+///////////////////////************************************
+express - เว็บเซิร์ฟเวอร์
+mongoose - ODM สำหรับ MongoDB
+dotenv - จัดการ environment variables
+helmet - ตั้งค่า HTTP headers เพื่อความปลอดภัย
+cors - จัดการ Cross-Origin Resource Sharing
+bcrypt - แฮชรหัสผ่าน
+jsonwebtoken - จัดการ JWT token สำหรับ authentication
+///////////////////////************************************
+
+npm install express mongoose dotenv helmet cors bcrypt jsonwebtoken
+npm install -D typescript ts-node @types/node @types/express @types/bcrypt @types/jsonwebtoken @types/cors nodemon
+
+สร้างไฟล์ tsconfg.json (ตั้งค่า TypeScript)
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  }
+}

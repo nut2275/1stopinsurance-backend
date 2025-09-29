@@ -1,0 +1,24 @@
+1StopInsurance/
+│
+├── src/
+│   ├── controllers/
+│   │    └── insuranceController.ts
+│   ├── models/
+│   │    └── insuranceModel.ts
+│   ├── routes/
+│   │    └── insuranceRoutes.ts
+│   ├── middlewares/
+│   │    ├── authMiddleware.ts
+│   │    └── errorMiddleware.ts
+│   ├── utils/
+│   │    └── logger.ts
+│   ├── config/
+│   │    └── db.ts
+│   ├── app.ts
+│   └── server.ts
+│
+├── .env
+├── .gitignore
+├── package.json
+├── tsconfig.json
+└── README.md
