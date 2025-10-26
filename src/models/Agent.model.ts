@@ -1,37 +1,48 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface Agent extends Document {
-  firstName: string;
-  lastName: string;
-  agentLicenseNumber: string;
-  cardExpiryDate: Date;
+  // agent_id:string;
+  first_name: string;
+  last_name: string;
+  agent_license_number: string;
+  card_expiry_date: Date;
   address: string;
-  imgProfile: string;      // URL ของ profile image
-  imgLineQrCode: string;   // URL ของ LINE QR code
+  imgProfile?: string;      // URL ของ profile image
+  idLine?: string;   // URL ของ LINE QR code
   phone: string;
   note?: string;
   username: string;
   password: string;        // ควร hash ก่อนบันทึก
-  birthdate: Date;
+  birth_date: Date;
+  verification_status: string;
 }
 
-const agentSchema = new Schema<Agent>(
+const AgentSchema: Schema = new Schema<Agent>(
   {
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
-    agentLicenseNumber: { type: String, required: true, unique: true },
-    cardExpiryDate: { type: Date, required: true },
+    // agent_id: {type: String, required: true, unique: true},
+    first_name: { type: String, required: true, trim: true },
+    last_name: { type: String, required: true, trim: true },
+    agent_license_number: { type: String, required: true, unique: true },
+    card_expiry_date: { type: Date, required: true },
     address: { type: String, required: true },
-    imgProfile: { type: String, required: true },
-    imgLineQrCode: { type: String, required: true },
+    imgProfile: { type: String, default: "" },
+    idLine: { type: String, default: "" },
     phone: { type: String, required: true },
-    note: { type: String },  // ไม่บังคับและไม่ unique
+    note: { type: String, default: "" },
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    birthdate: { type: Date, required: true },
+    birth_date: { type: Date, required: true },
+    verification_status: {
+      type: String,
+      enum: ['in_review', 'approved', 'rejected'],
+      required: true,
+      default: 'in_review',
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true, // เพิ่ม createdAt และ updatedAt ให้อัตโนมัติ
+  }
 );
 
 // Export model
-export default mongoose.model<Agent>('Agent', agentSchema);
+export default mongoose.model<Agent>('Agent', AgentSchema);

@@ -19,6 +19,7 @@ const router = Router();
 router.post('/register', createCustomer);
 // Login
 router.post('/login', loginCustomer);
+router.post("/profile", getProfile);
 
 import { authenticateJWT } from '../middlewares/authMiddleware';
 // ------------------------
@@ -28,6 +29,6 @@ router.get('/', authenticateJWT, getAllCustomers);
 router.get('/:id', authenticateJWT, getCustomerById);
 router.put('/:id', authenticateJWT, updateCustomer);
 router.delete('/:id', authenticateJWT, deleteCustomer);
-router.get("/profile", authenticateJWT, getProfile);
+
 
 export default router;

@@ -2,6 +2,7 @@ import express, { Application, Request, Response } from 'express';
 
 import dotenv from 'dotenv';
 import customerRoutes from './routes/Customer.routes';
+import agentRoutes from './routes/Agent.routes';
 import connectDB from "./config/db";
 import cors from 'cors';
 import helmet from 'helmet';
@@ -29,5 +30,6 @@ app.get('/', (req: Request, res: Response) => {
 
 // Routes
 app.use('/customers', customerRoutes);
+app.use('/agents', agentRoutes);
 
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
