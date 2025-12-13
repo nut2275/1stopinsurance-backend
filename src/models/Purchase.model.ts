@@ -26,7 +26,10 @@ export interface PurchaseDocument extends IPurchase, Document {}
 
 const PurchaseSchema = new Schema<PurchaseDocument>(
   {
-    customer_id: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
+    customer_id: { 
+      type: Schema.Types.ObjectId,
+      ref: 'Customer',
+      required: true },
 
     agent_id: {
       type: Schema.Types.ObjectId,
@@ -47,7 +50,7 @@ const PurchaseSchema = new Schema<PurchaseDocument>(
 
     start_date: { type: Date, required: true, default: Date.now },
 
-    policy_number: { type: String, required: true, unique: true },
+    policy_number: { type: String, required: false, unique: true },
 
     status: {
       type: String,

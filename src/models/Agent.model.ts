@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Int32, Schema } from 'mongoose';
 
 export interface Agent extends Document {
   // agent_id:string;
@@ -15,6 +15,7 @@ export interface Agent extends Document {
   password: string;        // ควร hash ก่อนบันทึก
   birth_date: Date;
   verification_status: string;
+  assigned_count: Number;
 }
 
 const AgentSchema: Schema = new Schema<Agent>(
@@ -38,6 +39,11 @@ const AgentSchema: Schema = new Schema<Agent>(
       required: true,
       default: 'in_review',
     },
+
+    assigned_count: {
+      type: Number,
+      default: 0
+  }
   },
   {
     timestamps: true, // เพิ่ม createdAt และ updatedAt ให้อัตโนมัติ
