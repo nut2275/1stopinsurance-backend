@@ -135,6 +135,36 @@ export const getProfile = async (req: Request, res: Response) => {
 };
 
 
+// backend/controllers/customerController.ts
+// backend/controllers/customerController.ts
+
+export const updateCustomer = async (req: Request, res: Response) => {
+  try {
+    // 1. เปลี่ยน _id เป็น id (เพื่อให้ตรงกับ route param มาตรฐาน /:id)
+    const { id } = req.params; 
+    console.log(`_id = ${id}`);
+    console.log(`req.body = ${req.body}`);
+    
+    
+    // 2. เพิ่ม options { new: true } เพื่อให้มันคืนค่าข้อมูลใหม่ และเช็คว่าเจอไหม
+    const updatedCustomer = await Customer.findByIdAndUpdate(id, req.body, { new: true });
+
+    // 3. ถ้าหาไม่เจอ (updatedCustomer เป็น null) ให้แจ้ง Error 404
+    if (!updatedCustomer) {
+        return res.status(404).json({ message: "หาข้อมูลลูกค้าไม่เจอ หรือ ID ผิด" });
+    }
+
+    res.status(200).json({ message: "อัปเดตข้อมูลสำเร็จ", data: updatedCustomer });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error", error: err });
+  }
+};
+
+
+
+
+
 
 
 
@@ -171,27 +201,6 @@ export const getCustomerById = async (req: Request, res: Response) => {
   }
 };
 
-// =========================
-// UPDATE CUSTOMER
-// =========================
-export const updateCustomer = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const updateData = { ...req.body };
-
-    // ถ้า update password ต้อง hash ก่อน
-    if (updateData.password) {
-      updateData.password = await bcrypt.hash(updateData.password, 10);
-    }
-
-    const updatedCustomer = await Customer.findByIdAndUpdate(id, updateData, { new: true }).select('-password');
-    if (!updatedCustomer) return res.status(404).json({ message: 'Customer not found' });
-
-    res.status(200).json({ message: 'Customer updated', customer: updatedCustomer });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err });
-  }
-};
  
 // =========================
 // DELETE CUSTOMER

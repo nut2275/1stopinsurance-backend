@@ -1,11 +1,14 @@
 import express, { Application, Request, Response } from 'express';
 
 import dotenv from 'dotenv';
-import customerRoutes from './routes/Customer.routes';
-import agentRoutes from './routes/Agent.routes';
-import connectDB from "./config/db";
 import cors from 'cors';
 import helmet from 'helmet';
+
+import connectDB from "./config/db";
+import customerRoutes from './routes/Customer.routes';
+import agentRoutes from './routes/Agent.routes';
+import carInsuranceRate from './routes/CarInsuranceRate.routes';
+import PurchaseRoutes from './routes/Purchase.routes';
 
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
@@ -15,13 +18,10 @@ connectDB();
 app.use(helmet());
 app.use(cors());
 
-app.use(express.json());
 
-
-
-// Middleware
-app.use(express.json({ limit: '50mb' })); // เพิ่ม limit JSON สำหรับ request ใหญ่
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// ✅ ใช้การกำหนดค่า Limit ตรงนี้จุดเดียวพอครับ
+app.use(express.json({ limit: '50mb' })); 
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Test root route
 app.get('/', (req: Request, res: Response) => {
@@ -31,5 +31,10 @@ app.get('/', (req: Request, res: Response) => {
 // Routes
 app.use('/customers', customerRoutes);
 app.use('/agents', agentRoutes);
+app.use('/api', carInsuranceRate);
+app.use('/purchase', PurchaseRoutes);
+
+// ส่วนของนัทเขียนแบบนี้เลยขี้เกียจแก้ขอเขียนทับเลยนะ
+// app.use('/car-insurance-rate',carInsuranceRate)
 
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));

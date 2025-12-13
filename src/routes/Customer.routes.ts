@@ -6,7 +6,7 @@ import {
   getAllCustomers,
   getCustomerById,
   updateCustomer,
-  deleteCustomer,
+  // deleteCustomer,
   getProfile 
 } from '../controllers/Customer.controller';
 
@@ -20,6 +20,7 @@ router.post('/register', createCustomer);
 // Login
 router.post('/login', loginCustomer);
 router.post("/profile", getProfile);
+router.put('/:id', updateCustomer);
 
 import { authenticateJWT } from '../middlewares/authMiddleware';
 // ------------------------
@@ -27,8 +28,8 @@ import { authenticateJWT } from '../middlewares/authMiddleware';
 // ------------------------
 router.get('/', authenticateJWT, getAllCustomers);
 router.get('/:id', authenticateJWT, getCustomerById);
-router.put('/:id', authenticateJWT, updateCustomer);
-router.delete('/:id', authenticateJWT, deleteCustomer);
+
+// router.delete('/:id', authenticateJWT, deleteCustomer);
 
 
 export default router;
