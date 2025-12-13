@@ -34,7 +34,4 @@ app.use('/agents', agentRoutes);
 app.use('/api', carInsuranceRate);
 app.use('/purchase', PurchaseRoutes);
 
-// ส่วนของนัทเขียนแบบนี้เลยขี้เกียจแก้ขอเขียนทับเลยนะ
-// app.use('/car-insurance-rate',carInsuranceRate)
-
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
