@@ -40,10 +40,9 @@ const carInsuranceSchema = new Schema<CarInsuranceRateOop>(
     fireFloodCoverage: { type: Number, default: 0 },
     firstLossCoverage: { type: Number, default: 0 },
     premium: { type: Number, default: 0 },
-    // img: { type: String, default: "" },
+
   },
   { timestamps: true }
 );
 
-// ✅ ระบุ generic type ให้ชัด เพื่อให้ TypeScript รู้ว่า Model นี้ใช้ interface ไหน
 export default model<CarInsuranceRateOop>("CarInsuranceRate", carInsuranceSchema);

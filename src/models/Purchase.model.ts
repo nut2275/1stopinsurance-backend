@@ -39,7 +39,7 @@ const PurchaseSchema = new Schema<PurchaseDocument>(
 
     carInsurance_id: {
       type: Schema.Types.ObjectId,
-      ref: 'CarInsurance',
+      ref: 'CarInsuranceRate',
       required: true
     },
 

@@ -63,3 +63,23 @@ export const createPurchase = async (req: Request, res: Response) => {
     });
   }
 };
+
+// ==========================================
+// ✅ ส่วนที่เพิ่มใหม่: ดึงข้อมูลตาม Customer ID
+// ==========================================
+export const getPurchasesByCustomerId = async (req: Request, res: Response) => {
+    try {
+      const { customer_id } = req.params;
+  
+      // ดึงข้อมูล Purchase + ข้อมูลรถ (ทะเบียน) + ข้อมูลประกัน (ชื่อแผน)
+      const purchases = await Purchase.find({ customer_id })
+        .populate("car_id", "registration brand carModel color") 
+        .populate("carInsurance_id") // ดึงข้อมูลแผนประกันทั้งหมดมา
+        .sort({ createdAt: -1 }); // เรียงจากใหม่ไปเก่า
+  
+      res.status(200).json(purchases);
+    } catch (error) {
+      console.error("Error fetching purchases:", error);
+      res.status(500).json({ message: "Internal server error", error });
+    }
+  };
