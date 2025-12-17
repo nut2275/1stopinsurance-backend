@@ -81,7 +81,6 @@ export const loginAgent = async(req:Request, res:Response) => {
     }
 }
 
-
 export const getAgentByLicense = async (req: Request, res: Response) => {
   try {
     const { license } = req.params;
@@ -97,5 +96,23 @@ export const getAgentByLicense = async (req: Request, res: Response) => {
     res.status(200).json(agent);
   } catch (error) {
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+//แสดง ข้อมูลติดต่อกับagent
+export const getAgentById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const agent = await AgentModel.findById(id).select('-password');
+
+    if (!agent) {
+      return res.status(404).json({ message: "Agent not found" });
+    }
+
+    res.status(200).json(agent);
+  } catch (err) {
+    const error = err as Error;
+    res.status(500).json({ message: "Error fetching agent", error: error.message });
   }
 };
