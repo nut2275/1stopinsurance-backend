@@ -6,6 +6,7 @@ import {AuthRequest} from '../middlewares/authMiddleware'
 import { ROLES } from '../interfaces/type';
 
 
+
 // if (!process.env.JWT_SECRET) {
 //   throw new Error('❌ Missing JWT_SECRET environment variable');
 // }
@@ -79,3 +80,22 @@ export const loginAgent = async(req:Request, res:Response) => {
         res.status(500).json({ message: "Create agent failed", error: error.message });
     }
 }
+
+
+export const getAgentByLicense = async (req: Request, res: Response) => {
+  try {
+    const { license } = req.params;
+
+    const agent = await AgentModel.findOne({
+      agent_license_number: license,
+    }).select("first_name last_name agent_license_number imgProfile");
+
+    if (!agent) {
+      return res.status(404).json({ message: "Agent not found" });
+    }
+
+    res.status(200).json(agent);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};

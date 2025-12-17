@@ -1,31 +1,50 @@
 import { Request, Response } from "express";
 import CarInsuranceRate, {CarInsuranceRateOop} from "../models/CarInsuranceRate.model";
 
+interface PlanQuery {
+  carBrand?: string;
+  level?: string;
+  insuranceBrand?: string;
+  year?: number;
+  model?: string;
+  subModel?: string;
+}
+
 export const getPlans = async (req: Request, res: Response) => {
   try {
-    // const { carBrand, level, insuranceBrand, year, model, subModel } = req.query;
-    const { carBrand, level, insuranceBrand, year, carModel, subModel } = req.query;
+    const { brand, model, variant, year, level } = req.query;
 
-    const query: Record<string, any> = {};
-    if (carBrand) query.carBrand = carBrand;
-    if (level) query.level = level;
-    if (insuranceBrand) query.insuranceBrand = insuranceBrand;
-    if (year) query.year = parseInt(year as string);
-    // if (model) query.model = model;
-    if (carModel) query.model = carModel;
-    if (subModel) query.subModel = subModel;
+    const query: PlanQuery = {};
 
-    const plans = await CarInsuranceRate.find(query);
-    res.json(plans);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    if (typeof brand === "string") {
+      query.carBrand = brand;
+    }
+
+    if (typeof model === "string") {
+      query.model = model;
+    }
+
+    if (typeof variant === "string") {
+      query.subModel = variant;
+    }
+
+    if (typeof year === "string" && !isNaN(Number(year))) {
+      query.year = Number(year);
+    }
+
+    // ✅ ใส่เฉพาะกรณีที่เลือกจริง
+    if (typeof level === "string" && level !== "ไม่ระบุ") {
+      query.level = level;
+    }
+
+    const plans = await CarInsuranceRate.find(query).lean();
+
+    res.status(200).json(plans);
+  } catch (error) {
+    console.error("getPlans error:", error);
+    res.status(500).json({ message: "Failed to fetch insurance plans" });
   }
 };
-
-
-
-
-
 
 //////////////////////////////////// ADMIN //////////////////////////////////////
 
