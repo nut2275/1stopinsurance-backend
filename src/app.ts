@@ -10,6 +10,7 @@ import agentRoutes from './routes/Agent.routes';
 import carInsuranceRate from './routes/CarInsuranceRate.routes';
 import PurchaseRoutes from './routes/Purchase.routes';
 import AdminCustomer from './routes/Admin/Customer.routes';
+import CarMasterRoutes from './routes/Admin/CarMaster.routes';
 
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
@@ -35,5 +36,6 @@ app.use('/agents', agentRoutes);
 app.use('/api', carInsuranceRate);
 app.use('/purchase', PurchaseRoutes);
 app.use('/admin', AdminCustomer);
+app.use('/car-master', CarMasterRoutes);
 
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
