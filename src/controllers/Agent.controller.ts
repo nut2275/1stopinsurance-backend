@@ -6,6 +6,7 @@ import {AuthRequest} from '../middlewares/authMiddleware'
 import { ROLES } from '../interfaces/type';
 
 
+
 // if (!process.env.JWT_SECRET) {
 //   throw new Error('❌ Missing JWT_SECRET environment variable');
 // }
@@ -80,21 +81,38 @@ export const loginAgent = async(req:Request, res:Response) => {
     }
 }
 
+export const getAgentByLicense = async (req: Request, res: Response) => {
+  try {
+    const { license } = req.params;
+
+    const agent = await AgentModel.findOne({
+      agent_license_number: license,
+    }).select("first_name last_name agent_license_number imgProfile");
+
+    if (!agent) {
+      return res.status(404).json({ message: "Agent not found" });
+    }
+
+    res.status(200).json(agent);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 //แสดง ข้อมูลติดต่อกับagent
 export const getAgentById = async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params; // รับ id จาก url parameters
+  try {
+    const { id } = req.params;
 
-        // ค้นหา Agent และไม่ส่ง password กลับไป (select -password)
-        const agent = await AgentModel.findById(id).select('-password');
+    const agent = await AgentModel.findById(id).select('-password');
 
-        if (!agent) {
-            return res.status(404).json({ message: "Agent not found" });
-        }
-
-        res.status(200).json(agent);
-    } catch (err) {
-        const error = err as Error;
-        res.status(500).json({ message: "Error fetching agent", error: error.message });
+    if (!agent) {
+      return res.status(404).json({ message: "Agent not found" });
     }
+
+    res.status(200).json(agent);
+  } catch (err) {
+    const error = err as Error;
+    res.status(500).json({ message: "Error fetching agent", error: error.message });
+  }
 };
