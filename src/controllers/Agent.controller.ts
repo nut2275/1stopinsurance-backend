@@ -81,23 +81,23 @@ export const loginAgent = async(req:Request, res:Response) => {
     }
 }
 
-export const getAgentByLicense = async (req: Request, res: Response) => {
-  try {
-    const { license } = req.params;
+// export const getAgentByLicense = async (req: Request, res: Response) => {
+//   try {
+//     const { license } = req.params;
 
-    const agent = await AgentModel.findOne({
-      agent_license_number: license,
-    }).select("first_name last_name agent_license_number imgProfile");
+//     const agent = await AgentModel.findOne({
+//       agent_license_number: license,
+//     }).select("first_name last_name agent_license_number imgProfile");
 
-    if (!agent) {
-      return res.status(404).json({ message: "Agent not found" });
-    }
+//     if (!agent) {
+//       return res.status(404).json({ message: "Agent not found" });
+//     }
 
-    res.status(200).json(agent);
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
-};
+//     res.status(200).json(agent);
+//   } catch (error) {
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
 
 //แสดง ข้อมูลติดต่อกับagent
 export const getAgentById = async (req: Request, res: Response) => {
@@ -114,5 +114,29 @@ export const getAgentById = async (req: Request, res: Response) => {
   } catch (err) {
     const error = err as Error;
     res.status(500).json({ message: "Error fetching agent", error: error.message });
+  }
+};
+
+export const searchAgents = async (req: Request, res: Response) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || typeof q !== "string") {
+      return res.status(400).json({ message: "Missing query" });
+    }
+
+    const agents = await AgentModel.find({
+      $or: [
+        { agent_license_number: { $regex: q, $options: "i" } },
+        { first_name: { $regex: q, $options: "i" } },
+        { last_name: { $regex: q, $options: "i" } },
+      ],
+    })
+      .select("first_name last_name agent_license_number imgProfile")
+      .limit(10);
+
+    res.status(200).json(agents);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
   }
 };
