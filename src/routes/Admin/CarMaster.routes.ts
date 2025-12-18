@@ -1,7 +1,9 @@
 import express from 'express';
 import multer from 'multer';
 import { 
-    getYears, getBrands, getModels, getSubModels, createBulk, importExcel 
+    getYears, getBrands, getModels, getSubModels, 
+    createBulk, importExcel,
+    getCarMasters, updateCarMaster, deleteCarMaster
 } from '../../controllers/Admin/CarMaster.controller';
 
 const router = express.Router();
@@ -17,5 +19,8 @@ router.get('/sub-models', getSubModels);
 // Admin Manage
 router.post('/bulk', createBulk);
 router.post('/import', upload.single('file'), importExcel);
+router.get('/', getCarMasters);
+router.put('/:id', updateCarMaster);
+router.delete('/:id', deleteCarMaster);
 
 export default router;
