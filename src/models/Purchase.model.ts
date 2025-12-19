@@ -20,6 +20,8 @@ export interface IPurchase {
   status: typeof PURCHASE_STATUSES[number];
   citizenCardImage?: string;
   carRegistrationImage?: string;
+  paymentSlipImage?: string;
+  policyFile?: string;
 }
 
 export interface PurchaseDocument extends IPurchase, Document {}
@@ -61,6 +63,8 @@ const PurchaseSchema = new Schema<PurchaseDocument>(
 
     citizenCardImage: { type: String },
     carRegistrationImage: { type: String },
+    paymentSlipImage: { type: String, default: null },
+    policyFile: { type: String, default: null },
   },
   {
     timestamps: true,

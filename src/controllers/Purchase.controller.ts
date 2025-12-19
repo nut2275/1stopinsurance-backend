@@ -5,6 +5,8 @@ import Car from "../models/Car.model";
 import Purchase from "../models/Purchase.model";
 import Agent from "../models/Agent.model";
 import PolicyCounter from "../models/PolicyCounter.model";
+import CarInsurance from "../models/CarInsuranceRate.model";
+import Customer from "../models/Customer.model";
 
 
 export const getPurchaseById = async (req: Request, res: Response) => {
@@ -198,5 +200,116 @@ export const getPurchaseDocuments = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("❌ GET PURCHASE DOCUMENT ERROR:", error);
     res.status(500).json({ message: "Server Error", error });
+  }
+};
+
+
+export const getAllPurchases = async (req: Request, res: Response) => {
+  try {
+    const purchases = await Purchase.find()
+      .populate("customer_id", "first_name last_name username") // ดึงชื่อลูกค้า
+      .populate("agent_id", "first_name last_name") // ถ้ามี Agent Model ให้เปิดบรรทัดนี้
+      .populate("car_id", "registration brand carModel") 
+      .populate("carInsurance_id", "insuranceBrand level") // ดึงชื่อบริษัทและชั้น
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(purchases);
+  } catch (error) {
+    console.error("Error fetching all purchases:", error);
+    res.status(500).json({ message: "Internal server error", error });
+  }
+};
+
+// 2. อัปเดตข้อมูล (แก้ไขสถานะ, ใส่เลขกรมธรรม์, อัปโหลดเอกสารเพิ่ม)
+export const updatePurchaseAdmin = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // รับค่าทั้งหมดจาก Frontend
+    const {
+      // ข้อมูล Purchase
+      status,
+      policy_number,
+      start_date,
+      paymentSlipImage,
+      policyFile,
+      citizenCardImage,     // รูปบัตร ปชช (เผื่อแอดมินแก้)
+      carRegistrationImage, // รูปทะเบียนรถ (เผื่อแอดมินแก้)
+
+      // ข้อมูล Customer
+      customer_first_name,
+      customer_last_name,
+
+      // ข้อมูล Car
+      car_brand,
+      car_model,
+      car_registration,
+
+      // ข้อมูล Insurance
+      insurance_brand,
+      insurance_level
+    } = req.body;
+
+    // 1. หา Purchase ตัวหลักก่อน เพื่อเอา ID ของตารางที่เกี่ยวข้อง
+    const purchase = await Purchase.findById(id);
+    if (!purchase) {
+      return res.status(404).json({ message: "Purchase not found" });
+    }
+
+    // 2. อัปเดตข้อมูลลูกค้า (Customer)
+    if (purchase.customer_id) {
+      await Customer.findByIdAndUpdate(purchase.customer_id, {
+        first_name: customer_first_name,
+        last_name: customer_last_name
+      });
+    }
+
+    // 3. อัปเดตข้อมูลรถ (Car)
+    if (purchase.car_id) {
+      await Car.findByIdAndUpdate(purchase.car_id, {
+        brand: car_brand,
+        carModel: car_model, // เช็คชื่อ field ใน Model Car ของคุณว่าใช้ 'carModel' หรือ 'model'
+        registration: car_registration
+      });
+    }
+
+    // 4. อัปเดตข้อมูลประกัน (CarInsurance)
+    // ⚠️ ข้อควรระวัง: การแก้ตรงนี้จะเปลี่ยนข้อมูลของแผนประกันต้นฉบับ 
+    // ถ้าแผนนี้มีคนใช้อยู่หลายคน ชื่อจะเปลี่ยนไปทั้งหมด
+    if (purchase.carInsurance_id) {
+       await CarInsurance.findByIdAndUpdate(purchase.carInsurance_id, {
+         insuranceBrand: insurance_brand,
+         level: insurance_level
+       });
+    }
+
+    // 5. อัปเดตข้อมูลการสั่งซื้อ (Purchase)
+    // สร้าง object สำหรับ update
+    const updateData: any = {
+      status,
+      policy_number,
+      start_date
+    };
+
+    // อัปเดตรูปภาพเฉพาะถ้ามีการส่งค่ามา (ถ้าเป็น string ว่าง หรือ null จะไม่ทับของเดิม)
+    if (paymentSlipImage) updateData.paymentSlipImage = paymentSlipImage;
+    if (policyFile) updateData.policyFile = policyFile;
+    if (citizenCardImage) updateData.citizenCardImage = citizenCardImage;
+    if (carRegistrationImage) updateData.carRegistrationImage = carRegistrationImage;
+
+    const updatedPurchase = await Purchase.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true }
+    )
+    .populate("customer_id")
+    .populate("car_id")
+    .populate("carInsurance_id");
+
+    res.status(200).json({ message: "Update success", data: updatedPurchase });
+
+  } catch (error) {
+    console.error("Update Error:", error);
+    res.status(500).json({ message: "Server error", error });
   }
 };
