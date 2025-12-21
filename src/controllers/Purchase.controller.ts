@@ -184,18 +184,26 @@ export const getPurchaseDocuments = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
+    // ✅ เพิ่ม field ที่ต้องใช้: paymentMethod, installmentDocImage, consentFormImage, paymentSlipImage
     const purchase = await Purchase.findById(id).select(
-      "citizenCardImage carRegistrationImage policy_number"
+      "citizenCardImage carRegistrationImage policy_number paymentSlipImage installmentDocImage consentFormImage paymentMethod policyFile"
     );
 
     if (!purchase) {
       return res.status(404).json({ message: "ไม่พบข้อมูลการซื้อประกัน" });
     }
 
+    // ส่งกลับไปให้ Frontend
     res.json({
       policyNumber: purchase.policy_number,
       citizenCardImage: purchase.citizenCardImage,
-      carRegistrationImage: purchase.carRegistrationImage
+      carRegistrationImage: purchase.carRegistrationImage,
+      // ✅ ส่งค่าใหม่กลับไป
+      paymentMethod: purchase.paymentMethod, 
+      paymentSlipImage: purchase.paymentSlipImage,
+      installmentDocImage: purchase.installmentDocImage,
+      consentFormImage: purchase.consentFormImage,
+      policyDocumentImage: purchase.policyFile // ถ้ามีไฟล์กรมธรรม์
     });
   } catch (error) {
     console.error("❌ GET PURCHASE DOCUMENT ERROR:", error);
@@ -209,7 +217,7 @@ export const getAllPurchases = async (req: Request, res: Response) => {
     const purchases = await Purchase.find()
       .populate("customer_id", "first_name last_name username") // ดึงชื่อลูกค้า
       .populate("agent_id", "first_name last_name") // ถ้ามี Agent Model ให้เปิดบรรทัดนี้
-      .populate("car_id", "registration brand carModel") 
+      .populate("car_id", "registration brand carModel year color province") 
       .populate("carInsurance_id", "insuranceBrand level") // ดึงชื่อบริษัทและชั้น
       .sort({ createdAt: -1 });
 
@@ -225,32 +233,43 @@ export const updatePurchaseAdmin = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
-    // รับค่าทั้งหมดจาก Frontend
+    // รับค่าทั้งหมดจาก Frontend (รวม Field ใหม่ที่เพิ่มเข้ามา)
     const {
-      // ข้อมูล Purchase
+      // --- ข้อมูล Purchase หลัก ---
       status,
       policy_number,
       start_date,
+      end_date,            // ✅ เพิ่มใหม่
+      paymentMethod,       // ✅ เพิ่มใหม่
+
+      // --- รูปภาพต่างๆ ---
       paymentSlipImage,
       policyFile,
-      citizenCardImage,     // รูปบัตร ปชช (เผื่อแอดมินแก้)
-      carRegistrationImage, // รูปทะเบียนรถ (เผื่อแอดมินแก้)
+      citizenCardImage,     
+      carRegistrationImage, 
+      installmentDocImage, // ✅ เพิ่มใหม่
+      consentFormImage,    // ✅ เพิ่มใหม่
 
-      // ข้อมูล Customer
+      // --- ข้อมูล Customer (Ref) ---
       customer_first_name,
       customer_last_name,
 
-      // ข้อมูล Car
+      // --- ข้อมูล Car (Ref) ---
       car_brand,
       car_model,
+      car_year,
+      car_color,
       car_registration,
+      car_province,        // ✅ รับค่าจังหวัดจาก Frontend
 
-      // ข้อมูล Insurance
+      // --- ข้อมูล Insurance (Ref) ---
       insurance_brand,
-      insurance_level
+      insurance_level,
+
+      reject_reason
     } = req.body;
 
-    // 1. หา Purchase ตัวหลักก่อน เพื่อเอา ID ของตารางที่เกี่ยวข้อง
+    // 1. หา Purchase ตัวหลักก่อน
     const purchase = await Purchase.findById(id);
     if (!purchase) {
       return res.status(404).json({ message: "Purchase not found" });
@@ -268,14 +287,16 @@ export const updatePurchaseAdmin = async (req: Request, res: Response) => {
     if (purchase.car_id) {
       await Car.findByIdAndUpdate(purchase.car_id, {
         brand: car_brand,
-        carModel: car_model, // เช็คชื่อ field ใน Model Car ของคุณว่าใช้ 'carModel' หรือ 'model'
-        registration: car_registration
+        carModel: car_model, 
+        year: car_year,
+        color: car_color,
+        registration: car_registration,
+        province: car_province // ✅ อัปเดตจังหวัดลงฐานข้อมูล
       });
     }
 
     // 4. อัปเดตข้อมูลประกัน (CarInsurance)
-    // ⚠️ ข้อควรระวัง: การแก้ตรงนี้จะเปลี่ยนข้อมูลของแผนประกันต้นฉบับ 
-    // ถ้าแผนนี้มีคนใช้อยู่หลายคน ชื่อจะเปลี่ยนไปทั้งหมด
+    // หมายเหตุ: การแก้ตรงนี้จะเปลี่ยนข้อมูล Master Data ถ้าประกันนี้ใช้ร่วมกันหลายคนอาจกระทบคนอื่น
     if (purchase.carInsurance_id) {
        await CarInsurance.findByIdAndUpdate(purchase.carInsurance_id, {
          insuranceBrand: insurance_brand,
@@ -283,24 +304,41 @@ export const updatePurchaseAdmin = async (req: Request, res: Response) => {
        });
     }
 
-    // 5. อัปเดตข้อมูลการสั่งซื้อ (Purchase)
-    // สร้าง object สำหรับ update
+    // 5. เตรียมข้อมูลสำหรับอัปเดต Purchase
     const updateData: any = {
       status,
       policy_number,
-      start_date
+      paymentMethod,
     };
 
-    // อัปเดตรูปภาพเฉพาะถ้ามีการส่งค่ามา (ถ้าเป็น string ว่าง หรือ null จะไม่ทับของเดิม)
+    // ✅ Logic การบันทึกเหตุผล
+    if (status === 'rejected') {
+        // ถ้าสถานะเป็น Rejected ให้บันทึกเหตุผลลงไป
+        updateData.reject_reason = reject_reason;
+    } else {
+        // (Optional) ถ้าเปลี่ยนสถานะกลับเป็นอย่างอื่น อาจจะเคลียร์เหตุผลทิ้ง หรือเก็บไว้ก็ได้
+        // updateData.reject_reason = null; 
+    }
+
+    // ✅ จัดการวันที่ (เช็คว่ามีค่าส่งมาหรือไม่ เพื่อป้องกัน error วันที่ว่างเปล่า)
+    if (start_date) updateData.start_date = start_date;
+    if (end_date) updateData.end_date = end_date;
+
+    // ✅ อัปเดตรูปภาพ (เช็คว่ามีค่าส่งมาหรือไม่ จะได้ไม่ทับด้วย null)
     if (paymentSlipImage) updateData.paymentSlipImage = paymentSlipImage;
     if (policyFile) updateData.policyFile = policyFile;
     if (citizenCardImage) updateData.citizenCardImage = citizenCardImage;
     if (carRegistrationImage) updateData.carRegistrationImage = carRegistrationImage;
+    
+    // รูปใหม่
+    if (installmentDocImage) updateData.installmentDocImage = installmentDocImage;
+    if (consentFormImage) updateData.consentFormImage = consentFormImage;
 
+    // 6. ทำการอัปเดตและ Populate ข้อมูลกลับไป
     const updatedPurchase = await Purchase.findByIdAndUpdate(
       id,
       updateData,
-      { new: true }
+      { new: true } // return ค่าใหม่กลับไป
     )
     .populate("customer_id")
     .populate("car_id")
