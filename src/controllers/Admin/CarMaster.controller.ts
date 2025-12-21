@@ -2,14 +2,13 @@ import { Request, Response } from 'express';
 import CarMasterModel from '../../models/CarMaster.model';
 import * as XLSX from 'xlsx';
 
-// ✅ ฟังก์ชันช่วยแปลงข้อความให้สวยงาม (Helper Function)
-// Input: "TOYOTA yaris" -> Output: "Toyota Yaris"
+// ✅ Helper Function: จัดรูปแบบข้อความ
 const formatText = (text: string): string => {
     if (!text) return "";
     return text
-        .trim() // ตัดช่องว่างหน้าหลัง
-        .toLowerCase() // แปลงเป็นตัวเล็กให้หมดก่อน
-        .replace(/\b\w/g, char => char.toUpperCase()); // จับตัวแรกของทุกคำ มาทำเป็นตัวใหญ่
+        .trim()
+        .toLowerCase()
+        .replace(/\b\w/g, char => char.toUpperCase());
 };
 
 // ==========================================
@@ -28,6 +27,7 @@ export const getYears = async (req: Request, res: Response) => {
 
 export const getBrands = async (req: Request, res: Response) => {
     try {
+        // ✅ ไม่ต้องใช้ year ก็ได้ เพื่อดึง Brand ทั้งหมดที่มีในระบบ
         const { year } = req.query;
         const filter = year ? { year: Number(year) } : {};
         const brands = await CarMasterModel.find(filter).distinct('brand');
@@ -38,15 +38,18 @@ export const getBrands = async (req: Request, res: Response) => {
     }
 };
 
+// ✅ ปรับปรุง: ให้ค้นหา Model จาก Brand ได้โดยไม่ต้องใส่ Year
 export const getModels = async (req: Request, res: Response) => {
     try {
         const { year, brand } = req.query;
-        if (!year || !brand) return res.status(400).json({ message: "Missing params" });
+        
+        // บังคับว่าต้องมี Brand
+        if (!brand) return res.status(400).json({ message: "Missing brand param" });
 
-        const models = await CarMasterModel.find({ 
-            year: Number(year), 
-            brand: String(brand) 
-        }).distinct('carModel');
+        const filter: any = { brand: String(brand) };
+        if (year) filter.year = Number(year);
+
+        const models = await CarMasterModel.find(filter).distinct('carModel');
         
         models.sort();
         res.status(200).json(models);
@@ -55,19 +58,27 @@ export const getModels = async (req: Request, res: Response) => {
     }
 };
 
+// ✅ ปรับปรุง: ให้ค้นหา SubModel จาก Brand + Model ได้
 export const getSubModels = async (req: Request, res: Response) => {
     try {
         const { year, brand, model } = req.query; 
         
-        if (!year || !brand || !model) return res.status(400).json({ message: "Missing params" });
+        // บังคับว่าต้องมี Brand และ Model
+        if (!brand || !model) return res.status(400).json({ message: "Missing params" });
 
-        const cars = await CarMasterModel.find({
-            year: Number(year),
+        const filter: any = {
             brand: String(brand),
             carModel: String(model)
-        }).select('_id subModel');
+        };
+        if (year) filter.year = Number(year);
 
-        res.status(200).json(cars);
+        // ดึงเฉพาะชื่อรุ่นย่อยที่ไม่ซ้ำกัน
+        const subModels = await CarMasterModel.find(filter).distinct('subModel');
+        
+        // กรองค่าว่าง (null/empty string) ออก และเรียงลำดับ
+        const cleanSubModels = subModels.filter(s => s).sort();
+
+        res.status(200).json(cleanSubModels);
     } catch (error) {
         res.status(500).json({ message: "Error fetching sub-models" });
     }
@@ -77,16 +88,13 @@ export const getSubModels = async (req: Request, res: Response) => {
 // Part 2: APIs สำหรับ Admin (Import Data)
 // ==========================================
 
-// 2.1 Smart Bulk Insert
 export const createBulk = async (req: Request, res: Response) => {
     try {
         let { brand, carModel, start_year, end_year, sub_models } = req.body;
 
-        // 🛡️ Data Normalization: จัดระเบียบข้อมูลก่อน
         brand = formatText(brand);       
         carModel = formatText(carModel); 
         
-        // สำหรับ SubModel (Array) แค่ trim พอ (ไม่ต้อง Title Case เพราะรุ่นย่อยมีชื่อเฉพาะเยอะ เช่น e:HEV)
         const formattedSubModels = (Array.isArray(sub_models) ? sub_models : [sub_models])
             .map((sub: string) => sub.trim());
 
@@ -95,7 +103,6 @@ export const createBulk = async (req: Request, res: Response) => {
         }
 
         const carsToInsert = [];
-        
         for (let year = parseInt(start_year); year <= parseInt(end_year); year++) {
             for (const sub of formattedSubModels) {
                 carsToInsert.push({
@@ -124,7 +131,6 @@ export const createBulk = async (req: Request, res: Response) => {
     }
 };
 
-// 2.2 Excel Import
 export const importExcel = async (req: Request, res: Response) => {
     try {
         if (!req.file) return res.status(400).json({ message: "กรุณาอัปโหลดไฟล์ Excel" });
@@ -135,15 +141,14 @@ export const importExcel = async (req: Request, res: Response) => {
         const rawData = XLSX.utils.sheet_to_json(sheet) as any[];
 
         const carsToInsert = rawData.map(row => {
-            // ดึงค่าดิบ
             const rawBrand = row['brand'] || row['Brand'] || row['ยี่ห้อ'];
             const rawModel = row['model'] || row['Model'] || row['carModel'] || row['รุ่น'];
             const rawSub = row['sub_model'] || row['subModel'] || row['SubModel'] || row['รุ่นย่อย'];
             
             return {
-                brand: formatText(rawBrand),    // ✅ จัดระเบียบ Brand
-                carModel: formatText(rawModel), // ✅ จัดระเบียบ Model
-                subModel: rawSub ? String(rawSub).trim() : null, // รุ่นย่อยแค่ trim
+                brand: formatText(rawBrand),
+                carModel: formatText(rawModel),
+                subModel: rawSub ? String(rawSub).trim() : null,
                 year: row['year'] || row['Year'] || row['ปี']
             };
         }).filter(car => car.brand && car.carModel && car.year);
@@ -165,27 +170,20 @@ export const importExcel = async (req: Request, res: Response) => {
     }
 };
 
-
-
-
 // ==========================================
-// Part 3: APIs สำหรับ Admin (Manage Data: Search, Edit, Delete)
+// Part 3: APIs สำหรับ Admin (Manage Data)
 // ==========================================
 
-// 3.1 🔍 ดูข้อมูลทั้งหมด + Search 4 ช่อง + Year Range
 export const getCarMasters = async (req: Request, res: Response) => {
     try {
         const { page = 1, limit = 50, brand, carModel, subModel, year_range } = req.query;
         
-        // ❌ เอา isActive ออก เพราะเราจะดึงข้อมูลทั้งหมดที่มีอยู่จริง
         const query: any = {}; 
 
-        // --- Smart Filter ---
         if (brand) query.brand = { $regex: brand, $options: 'i' };
         if (carModel) query.carModel = { $regex: carModel, $options: 'i' };
         if (subModel) query.subModel = { $regex: subModel, $options: 'i' };
 
-        // --- Year Range Filter ---
         if (year_range) {
             const rangeParts = String(year_range).split('-');
             if (rangeParts.length === 2) {
@@ -220,13 +218,11 @@ export const getCarMasters = async (req: Request, res: Response) => {
     }
 };
 
-// 3.2 ✏️ แก้ไขข้อมูล (Duplicate Check Only)
 export const updateCarMaster = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         let { brand, carModel, subModel, year } = req.body;
 
-        // Normalize Data
         if (brand) brand = formatText(brand);
         if (carModel) carModel = formatText(carModel);
         if (subModel) subModel = subModel.trim();
@@ -249,13 +245,9 @@ export const updateCarMaster = async (req: Request, res: Response) => {
     }
 };
 
-// 3.3 🗑️ ลบข้อมูล (Hard Delete - ลบหายไปเลย)
 export const deleteCarMaster = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-
-        // ✅ เปลี่ยนเป็น findByIdAndDelete (ลบถาวร)
-        // ไม่ต้องใช้ isActive แล้ว ตรงใจเพื่อนแน่นอนครับ
         const deletedCar = await CarMasterModel.findByIdAndDelete(id);
 
         if (!deletedCar) return res.status(404).json({ message: "ไม่พบข้อมูล" });

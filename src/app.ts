@@ -1,5 +1,4 @@
 import express, { Application, Request, Response } from 'express';
-
 import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -13,17 +12,16 @@ import AdminCustomer from './routes/Admin/Customer.routes';
 import CarMasterRoutes from './routes/Admin/CarMaster.routes';
 import carDataRoutes from "./routes/CarData.routes";
 
-
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
 
 dotenv.config();
 connectDB();
+
 app.use(helmet());
 app.use(cors());
 
-
-// ✅ ใช้การกำหนดค่า Limit ตรงนี้จุดเดียวพอครับ
+// ✅ Config Limit สำหรับรองรับการ Upload รูปภาพหรือไฟล์ Excel ใหญ่ๆ
 app.use(express.json({ limit: '50mb' })); 
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -38,7 +36,8 @@ app.use('/agents', agentRoutes);
 app.use('/api', carInsuranceRate);
 app.use('/purchase', PurchaseRoutes);
 app.use('/admin', AdminCustomer);
-//ข้อมูลรถจัดการของ admin รองรับอัปเดตในอนาคต
+
+// ✅ Routes สำหรับจัดการข้อมูลรถ (Admin & Dropdown)
 app.use('/car-master', CarMasterRoutes);
 app.use("/api/car-data", carDataRoutes);
 
