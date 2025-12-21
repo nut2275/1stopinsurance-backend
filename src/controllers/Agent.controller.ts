@@ -81,6 +81,37 @@ export const loginAgent = async(req:Request, res:Response) => {
     }
 }
 
+export const updateAgent = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { address, imgProfile, idLine, phone, note } = req.body; // รับเฉพาะฟิลด์ที่อนุญาต
+
+    // สร้าง Object สำหรับอัปเดต (ป้องกันไม่ให้แก้ username/password/license มั่วซั่ว)
+    const updateData: any = {};
+    if (address) updateData.address = address;
+    if (imgProfile) updateData.imgProfile = imgProfile;
+    if (idLine) updateData.idLine = idLine;
+    if (phone) updateData.phone = phone;
+    if (note) updateData.note = note;
+
+    // อัปเดตข้อมูล (new: true คือให้ return ข้อมูลใหม่กลับมา)
+    const updatedAgent = await AgentModel.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).select('-password'); // ไม่ส่ง password กลับไป
+
+    if (!updatedAgent) {
+      return res.status(404).json({ message: "ไม่พบข้อมูลตัวแทน" });
+    }
+
+    res.status(200).json(updatedAgent);
+  } catch (err) {
+    const error = err as Error;
+    res.status(500).json({ message: "เกิดข้อผิดพลาดในการอัปเดตข้อมูล", error: error.message });
+  }
+};
+
 // export const getAgentByLicense = async (req: Request, res: Response) => {
 //   try {
 //     const { license } = req.params;

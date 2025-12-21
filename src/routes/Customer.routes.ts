@@ -27,7 +27,8 @@ import { authenticateJWT } from '../middlewares/authMiddleware';
 // PROTECTED ROUTES (ต้อง login)
 // ------------------------
 router.get('/', authenticateJWT, getAllCustomers);
-router.get('/:id', authenticateJWT, getCustomerById);
+router.get('/:id', getCustomerById);
+// router.get('/:id', authenticateJWT, getCustomerById);
 
 // router.delete('/:id', authenticateJWT, deleteCustomer);
 
