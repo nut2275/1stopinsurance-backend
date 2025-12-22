@@ -84,22 +84,34 @@ export const loginAgent = async(req:Request, res:Response) => {
 export const updateAgent = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { address, imgProfile, idLine, phone, note } = req.body; // รับเฉพาะฟิลด์ที่อนุญาต
+    
+    // Debug: ดูว่า Frontend ส่งอะไรมาบ้าง (ดูใน Terminal ฝั่ง Backend)
+    console.log("Updating Agent ID:", id);
+    // console.log("Data received:", req.body);
 
-    // สร้าง Object สำหรับอัปเดต (ป้องกันไม่ให้แก้ username/password/license มั่วซั่ว)
+    const { address, imgProfile, idLine, phone, note } = req.body;
+
     const updateData: any = {};
-    if (address) updateData.address = address;
-    if (imgProfile) updateData.imgProfile = imgProfile;
-    if (idLine) updateData.idLine = idLine;
-    if (phone) updateData.phone = phone;
-    if (note) updateData.note = note;
+    // console.log("update : ", {address, imgProfile, idLine, phone, note});
+    
 
-    // อัปเดตข้อมูล (new: true คือให้ return ข้อมูลใหม่กลับมา)
+    // ✅ แก้จุดนี้: เช็ค undefined แทนเช็ค true/false
+    // เพื่อให้รองรับกรณีส่งค่าว่าง "" มา (เช่น ลบรูป, ลบ Note)
+    if (address !== undefined) updateData.address = address;
+    if (imgProfile !== undefined) updateData.imgProfile = imgProfile;
+    if (idLine !== undefined) updateData.idLine = idLine;
+    if (phone !== undefined) updateData.phone = phone;
+    if (note !== undefined) updateData.note = note;
+
+    // อัปเดตข้อมูล
     const updatedAgent = await AgentModel.findByIdAndUpdate(
       id,
       { $set: updateData },
-      { new: true, runValidators: true }
-    ).select('-password'); // ไม่ส่ง password กลับไป
+      { 
+        new: true, // ส่งข้อมูลใหม่กลับมา
+        runValidators: true // บังคับเช็คเงื่อนไขตาม Model (เช่น phone ต้องไม่ว่าง)
+      }
+    ).select('-password');
 
     if (!updatedAgent) {
       return res.status(404).json({ message: "ไม่พบข้อมูลตัวแทน" });
@@ -108,6 +120,7 @@ export const updateAgent = async (req: Request, res: Response) => {
     res.status(200).json(updatedAgent);
   } catch (err) {
     const error = err as Error;
+    console.error("Update Error:", error.message); // Log error ให้เห็นชัดๆ
     res.status(500).json({ message: "เกิดข้อผิดพลาดในการอัปเดตข้อมูล", error: error.message });
   }
 };
