@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import AgentModel from '../../models/Agent.model'; // เช็ค Path ให้ถูกนะครับ
+import bcrypt from 'bcryptjs';
+
 
 // 1. ดึงข้อมูล Agent ทั้งหมด (รองรับ Filter Status ถ้าส่ง query มา)
 export const getAllAgentsMaster = async (req: Request, res: Response) => {
@@ -77,33 +79,35 @@ export const updateAgentInfoMaster = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         
-        // ดึงค่าจาก Body ที่อนุญาตให้แก้ (เพิ่ม verification_status)
+        // ดึงค่าจาก Body
         const { 
             first_name, last_name, phone, idLine, 
             address, agent_license_number, card_expiry_date, 
-            birth_date, note, verification_status // <--- ✅ เพิ่มตรงนี้
+            birth_date, note, verification_status,
+            password // ✅ รับ password มาด้วย
         } = req.body;
+
+        // เตรียมข้อมูลที่จะ Update
+        let updateData: any = {
+            first_name, last_name, phone, idLine,
+            address, agent_license_number, note,
+            verification_status,
+            card_expiry_date: card_expiry_date ? new Date(card_expiry_date) : undefined,
+            birth_date: birth_date ? new Date(birth_date) : undefined,
+        };
+
+        // ✅ Logic: ถ้ามีการส่ง password มาใหม่ ให้ Hash ก่อนบันทึก
+        if (password && password.trim() !== "") {
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+            updateData.password = hashedPassword; // เพิ่ม field password ที่ hash แล้วเข้าไป
+        }
 
         const updatedAgent = await AgentModel.findByIdAndUpdate(
             id,
-            {
-                $set: {
-                    first_name, 
-                    last_name, 
-                    phone, 
-                    idLine,
-                    address, 
-                    agent_license_number, 
-                    note,
-                    verification_status, // <--- ✅ บันทึกลง Database
-                    
-                    // แปลงวันที่ถ้ามีการส่งมา (ถ้าส่งมาเป็น string ว่าง หรือ null จะได้ไม่ error)
-                    card_expiry_date: card_expiry_date ? new Date(card_expiry_date) : undefined,
-                    birth_date: birth_date ? new Date(birth_date) : undefined,
-                }
-            },
-            { new: true, runValidators: true } // runValidators เพื่อเช็ค enum ของ verification_status
-        ).select('-password');
+            { $set: updateData },
+            { new: true, runValidators: true }
+        ).select('-password'); // ยังคงไม่ส่ง password กลับไปหน้าบ้าน
 
         if (!updatedAgent) {
             return res.status(404).json({ message: "Agent not found" });
