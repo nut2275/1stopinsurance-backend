@@ -5,7 +5,6 @@ import { createAgent, loginAgent, updateAgent,
 } from '../controllers/Agent.controller'
 
 const router = Router();
-import { authenticateJWT } from '../middlewares/authMiddleware';
 
 router.post('/register', createAgent)
 

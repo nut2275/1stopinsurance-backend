@@ -145,6 +145,23 @@ export const updateAgent = async (req: Request, res: Response) => {
 // };
 
 //แสดง ข้อมูลติดต่อกับagent
+// export const getAgentById = async (req: Request, res: Response) => {
+//   try {
+//     const { id } = req.params;
+
+//     const agent = await AgentModel.findById(id).select('-password');
+
+//     if (!agent) {
+//       return res.status(404).json({ message: "Agent not found" });
+//     }
+
+//     res.status(200).json(agent);
+//   } catch (err) {
+//     const error = err as Error;
+//     res.status(500).json({ message: "Error fetching agent", error: error.message });
+//   }
+// };
+
 export const getAgentById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -155,12 +172,30 @@ export const getAgentById = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Agent not found" });
     }
 
-    res.status(200).json(agent);
+    // --- ส่วนที่เพิ่ม: คำนวณคิว (Queue Calculation) ---
+    let queueNumber = 0;
+    
+    if (agent.verification_status === 'in_review') {
+      // นับจำนวนคนที่สถานะ in_review และสมัครมา "ก่อนหน้าหรือพร้อมกัน" (createdAt <= agent.createdAt)
+      queueNumber = await AgentModel.countDocuments({
+        verification_status: 'in_review',
+        createdAt: { $lte: agent.createdAt } 
+      });
+    }
+    // -----------------------------------------------
+
+    // ส่งข้อมูลกลับไปพร้อม field queue_number
+    res.status(200).json({
+      ...agent.toObject(),
+      queue_number: queueNumber // ส่งเลขคิวไปด้วย (ถ้าไม่ใช่ in_review จะเป็น 0)
+    });
+
   } catch (err) {
     const error = err as Error;
     res.status(500).json({ message: "Error fetching agent", error: error.message });
   }
 };
+
 
 export const searchAgents = async (req: Request, res: Response) => {
   try {

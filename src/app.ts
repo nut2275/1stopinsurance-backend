@@ -11,6 +11,7 @@ import PurchaseRoutes from './routes/Purchase.routes';
 import AdminCustomer from './routes/Admin/Customer.routes';
 import CarMasterRoutes from './routes/Admin/CarMaster.routes';
 import carDataRoutes from "./routes/CarData.routes";
+import agentMasterRoutes from './routes/Admin/agentMaster.routes';
 
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
@@ -37,8 +38,9 @@ app.use('/api', carInsuranceRate);
 app.use('/purchase', PurchaseRoutes);
 app.use('/admin', AdminCustomer);
 
-// ✅ Routes สำหรับจัดการข้อมูลรถ (Admin & Dropdown)
+// Admin Routes
 app.use('/car-master', CarMasterRoutes);
 app.use("/api/car-data", carDataRoutes);
+app.use('/api/admin/agents', agentMasterRoutes);
 
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));

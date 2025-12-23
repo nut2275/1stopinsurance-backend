@@ -16,6 +16,10 @@ export interface Agent extends Document {
   birth_date: Date;
   verification_status: string;
   assigned_count: Number;
+
+  // Date
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const AgentSchema: Schema = new Schema<Agent>(
