@@ -64,7 +64,8 @@ export const loginAgent = async(req:Request, res:Response) => {
 
         const token = jwt.sign(
             {id:agent._id, username:agent.username, role: ROLES.AGENT},
-            JWT_SECRET, { expiresIn: '30d' }
+            process.env.JWT_SECRET || "secret",
+            { expiresIn: "30d" }
         )
 
         res.status(200).json({

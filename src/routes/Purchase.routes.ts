@@ -1,21 +1,32 @@
 import express from "express";
 import { 
-    createPurchase, getPurchasesByCustomerId, 
+    createPurchase, 
+    getPurchasesByCustomerId, 
     getPurchaseDocuments,
     getPurchaseById,
     getAllPurchases,
-    updatePurchaseAdmin
+    updatePurchaseAdmin,
+    getAgentHistory,       // ✅ Import
+    updatePurchaseAgent    // ✅ Import
 } from "../controllers/Purchase.controller";
+
+import { verifyToken, isAgent, isAdmin } from "../middleware/auth";
 
 const router = express.Router();
 
+// --- Public / Customer ---
 router.post("/insurance", createPurchase);
 router.get("/customer/:customer_id", getPurchasesByCustomerId);
-
 router.get("/:id/documents", getPurchaseDocuments);
 router.get('/:id', getPurchaseById);
 
-router.get("/admin/all", getAllPurchases);
-router.put("/admin/:id", updatePurchaseAdmin);
+// --- Admin ---
+router.get("/admin/all", verifyToken, isAdmin, getAllPurchases);
+router.put("/admin/:id", verifyToken, isAdmin, updatePurchaseAdmin);
+
+// --- Agent ---
+// ✅ ใช้ verifyToken (เพื่อแตก req.user) และ isAgent (เพื่อกันคนอื่น)
+router.get("/agent/my-history", verifyToken, isAgent, getAgentHistory);
+router.put("/agent/:id", verifyToken, isAgent, updatePurchaseAgent);
 
 export default router;
