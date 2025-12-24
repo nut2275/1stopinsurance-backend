@@ -21,8 +21,8 @@ router.get("/:id/documents", getPurchaseDocuments);
 router.get('/:id', getPurchaseById);
 
 // --- Admin ---
-router.get("/admin/all", verifyToken, isAdmin, getAllPurchases);
-router.put("/admin/:id", verifyToken, isAdmin, updatePurchaseAdmin);
+router.get("/admin/all", getAllPurchases);
+router.put("/admin/:id", updatePurchaseAdmin);
 
 // --- Agent ---
 // ✅ ใช้ verifyToken (เพื่อแตก req.user) และ isAgent (เพื่อกันคนอื่น)

@@ -1,31 +1,50 @@
-import mongoose, {Schema, Document} from "mongoose";
+import mongoose, { Schema, Document, Model } from 'mongoose';
 
-export interface Notification extends Document {
-    // sender_admin_id: string;
-    sender_customer_id: string;
-    sender_agent_id: string;
-    receiver_customer_id: string;
-    receiver_agent_id: string;
-    title: string;
-    text: string;
-    date: Date;
-    type: string;
+// 1. Define Interface (Type Definition)
+export interface INotification extends Document {
+  recipientId: string;
+  recipientType: 'agent' | 'customer';
+  message: string;
+  type: 'info' | 'warning' | 'success';
+  isRead: boolean;
+  relatedPurchaseId?: string;
+  createdAt: Date;
 }
 
-const NotificationSchema: Schema<Notification> = new Schema<Notification>(
-    {
-        //sender_admin_id: String,
-        sender_customer_id: String,
-        sender_agent_id: String,
-        receiver_customer_id: String,
-        receiver_agent_id: String,
-        title: {type: String, required: true},
-        text: {type: String, required: true},
-        type: {type: String, required: true, default:"info"} //info, warning 
-    },
-    {
-        timestamps: true, // ✅ เพิ่มตรงนี้ Mongoose จะสร้าง 'createdAt' และ 'updatedAt' ให้
-    }
-)
+// 2. Define Schema
+const NotificationSchema: Schema<INotification> = new Schema({
+  recipientId: { 
+    type: String, 
+    required: [true, 'Please provide recipient ID'] 
+  },
+  recipientType: { 
+    type: String, 
+    enum: ['agent', 'customer'], 
+    required: true 
+  },
+  message: { 
+    type: String, 
+    required: true 
+  },
+  type: { 
+    type: String, 
+    enum: ['info', 'warning', 'success'], 
+    default: 'info' 
+  },
+  isRead: { 
+    type: Boolean, 
+    default: false 
+  },
+  relatedPurchaseId: { 
+    type: String 
+  },
+  createdAt: { 
+    type: Date, 
+    default: Date.now 
+  },
+});
 
-export default mongoose.model('Notification', NotificationSchema)
+// 3. Export Model (ป้องกัน Error Model Overwrite ใน Next.js)
+const Notification: Model<INotification> = mongoose.models.Notification || mongoose.model<INotification>('Notification', NotificationSchema);
+
+export default Notification;
