@@ -10,7 +10,6 @@ import carInsuranceRate from './routes/CarInsuranceRate.routes';
 import PurchaseRoutes from './routes/Purchase.routes';
 import AdminCustomer from './routes/Admin/Customer.routes';
 import CarMasterRoutes from './routes/Admin/CarMaster.routes';
-import carDataRoutes from "./routes/CarData.routes";
 import agentMasterRoutes from './routes/Admin/agentMaster.routes';
 import notificationRoutes from "./routes/Notifications.routes";
 
@@ -41,7 +40,6 @@ app.use('/admin', AdminCustomer);
 
 // Admin Routes
 app.use('/car-master', CarMasterRoutes);
-app.use("/api/car-data", carDataRoutes);
 app.use('/api/admin/agents', agentMasterRoutes);
 
 app.use("/api", notificationRoutes);
