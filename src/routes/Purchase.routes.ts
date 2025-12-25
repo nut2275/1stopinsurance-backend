@@ -8,7 +8,9 @@ import {
     updatePurchaseAdmin,
     getAgentHistory,       // ✅ Import
     updatePurchaseAgent    // ✅ Import
+    
 } from "../controllers/Purchase.controller";
+import { getAgentCustomerStats } from "../controllers/Agent/AgentDashboard.controller";
 
 import { verifyToken, isAgent, isAdmin } from "../middleware/auth";
 
@@ -28,5 +30,8 @@ router.put("/admin/:id", updatePurchaseAdmin);
 // ✅ ใช้ verifyToken (เพื่อแตก req.user) และ isAgent (เพื่อกันคนอื่น)
 router.get("/agent/my-history", verifyToken, isAgent, getAgentHistory);
 router.put("/agent/:id", verifyToken, isAgent, updatePurchaseAgent);
+
+// ✅ เพิ่ม Route สำหรับดึงสถิติ Dashboard
+router.get("/agent/customer-stats/:id", getAgentCustomerStats);
 
 export default router;

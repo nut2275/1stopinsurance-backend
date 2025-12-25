@@ -272,28 +272,7 @@ export const getAgentHistory = async (req: Request, res: Response) => {
         res.status(500).json({ message: "Server Error", error });
     }
 };
-// export const getAgentHistory = async (req: Request, res: Response) => {
-//     try {
-//         // ดึง user จาก middleware verifyToken
-//         const user = (req as any).user;
-//         const agentId = user?.id || user?._id || user?.agent_id;
 
-//         if (!agentId) {
-//             return res.status(401).json({ message: "Unauthorized: Agent ID not found" });
-//         }
-
-//         const purchases = await Purchase.find({ agent_id: agentId })
-//             .populate("customer_id", "first_name last_name username email phone")
-//             .populate("car_id")
-//             .populate("carInsurance_id")
-//             .sort({ createdAt: -1 });
-
-//         res.status(200).json(purchases);
-//     } catch (error) {
-//         console.error("Agent History Error:", error);
-//         res.status(500).json({ message: "Server Error", error });
-//     }
-// };
 
 /* ✅ 2. Agent แก้ไขข้อมูล */
 export const updatePurchaseAgent = async (req: Request, res: Response) => {
@@ -363,63 +342,3 @@ export const updatePurchaseAgent = async (req: Request, res: Response) => {
         res.status(500).json({ message: "Server error", error });
     }
 };
-// export const updatePurchaseAgent = async (req: Request, res: Response) => {
-//     try {
-//         const { id } = req.params;
-//         const user = (req as any).user;
-//         const agentId = user?.id || user?._id || user?.agent_id;
-
-//         // รับค่า body ... (เหมือนเดิม)
-//         const {
-//              status, policy_number, start_date, end_date, paymentMethod,
-//              paymentSlipImage, policyFile, citizenCardImage, carRegistrationImage, installmentDocImage, consentFormImage,
-//              car_brand, car_model, car_year, car_color, car_registration, car_province,
-//              insurance_brand, insurance_level,
-//              reject_reason
-//         } = req.body;
-
-//         // เช็คว่าเป็นเจ้าของรายการนี้จริงหรือไม่
-//         const purchase = await Purchase.findOne({ _id: id, agent_id: agentId });
-        
-//         if (!purchase) {
-//             return res.status(404).json({ message: "ไม่พบรายการ หรือคุณไม่มีสิทธิ์แก้ไขรายการนี้" });
-//         }
-
-//         // Logic การ update เหมือนเดิม ...
-//         if (purchase.car_id) {
-//              await Car.findByIdAndUpdate(purchase.car_id, {
-//                  brand: car_brand, carModel: car_model, year: car_year, 
-//                  color: car_color, registration: car_registration, province: car_province
-//              });
-//         }
- 
-//         if (purchase.carInsurance_id) {
-//              await CarInsurance.findByIdAndUpdate(purchase.carInsurance_id, {
-//                  insuranceBrand: insurance_brand, level: insurance_level
-//              });
-//         }
- 
-//         const updateData: any = { status, policy_number, paymentMethod };
-//         if (status === 'rejected') updateData.reject_reason = reject_reason;
-//         if (start_date) updateData.start_date = start_date;
-//         if (end_date) updateData.end_date = end_date;
- 
-//         if (paymentSlipImage) updateData.paymentSlipImage = paymentSlipImage;
-//         if (policyFile) updateData.policyFile = policyFile;
-//         if (citizenCardImage) updateData.citizenCardImage = citizenCardImage;
-//         if (carRegistrationImage) updateData.carRegistrationImage = carRegistrationImage;
-//         if (installmentDocImage) updateData.installmentDocImage = installmentDocImage;
-//         if (consentFormImage) updateData.consentFormImage = consentFormImage;
- 
-//         const updatedPurchase = await Purchase.findByIdAndUpdate(id, updateData, { new: true })
-//              .populate("customer_id")
-//              .populate("car_id")
-//              .populate("carInsurance_id");
- 
-//         res.status(200).json({ message: "Agent update success", data: updatedPurchase });
-
-//     } catch (error) {
-//         console.error("Agent Update Error:", error);
-//         res.status(500).json({ message: "Server error", error });
-//     }
-// };
