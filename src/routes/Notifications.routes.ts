@@ -21,8 +21,7 @@ router.post("/notifications", createNotification);
 router.put("/notifications/:id/read", markAsRead);
 
 // DELETE: /api/notifications/:id (ลบแจ้งเตือน)
-router.delete("/notifications/:id", deleteNotification);
-
 router.put("/notifications/read-bulk", markAsReadBulk);
+router.put("/notifications/:id/read", markAsRead);
 
 export default router;

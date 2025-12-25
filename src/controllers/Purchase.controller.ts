@@ -260,10 +260,11 @@ export const getAgentHistory = async (req: Request, res: Response) => {
         }
 
         const purchases = await Purchase.find({ agent_id: agentId })
-            // ✅ เพิ่ม 'imgProfile' ตรงนี้
             .populate("customer_id", "first_name last_name username email phone imgProfile_customer") 
             .populate("car_id")
             .populate("carInsurance_id")
+            // ✅ เพิ่มบรรทัดนี้ครับ
+            .populate("agent_id", "first_name last_name") 
             .sort({ createdAt: -1 });
 
         res.status(200).json(purchases);
@@ -333,7 +334,8 @@ export const updatePurchaseAgent = async (req: Request, res: Response) => {
              // ✅ เพิ่ม imgProfile ตอน return กลับไปด้วย (เผื่อเอาไปใช้ต่อ)
              .populate("customer_id", "first_name last_name username imgProfile_customer")
              .populate("car_id")
-             .populate("carInsurance_id");
+             .populate("carInsurance_id")
+             .populate("agent_id", "first_name last_name");
  
         res.status(200).json({ message: "Agent update success", data: updatedPurchase });
  

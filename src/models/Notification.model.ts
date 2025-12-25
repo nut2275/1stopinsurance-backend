@@ -7,9 +7,9 @@ export interface INotification extends Document {
     name: string;
     role: 'admin' | 'agent' | 'customer';
   };
-  recipientType: 'agent' | 'customer';
+  recipientType: 'agent' | 'customer' | 'admin';
   message: string;
-  type: 'info' | 'warning' | 'success';
+  type: 'info' | 'warning' | 'success' | 'primary';
   isRead: boolean;
   relatedPurchaseId?: string;
   createdAt: Date;
@@ -23,7 +23,7 @@ const NotificationSchema: Schema<INotification> = new Schema({
   },
   recipientType: { 
     type: String, 
-    enum: ['agent', 'customer'], 
+    enum: ['agent', 'customer', 'admin'], 
     required: true 
   },
   message: { 
@@ -32,7 +32,7 @@ const NotificationSchema: Schema<INotification> = new Schema({
   },
   type: { 
     type: String, 
-    enum: ['info', 'warning', 'success'], 
+    enum: ['info', 'warning', 'success', 'primary'], 
     default: 'info' 
   },
   isRead: { 
@@ -48,7 +48,7 @@ const NotificationSchema: Schema<INotification> = new Schema({
   },
   sender: {
     name: { type: String },
-    role: { type: String, enum: ['admin', 'agent', 'customer'] }
+    role: { type: String, enum: ['admin', 'agent', 'customer', 'guest'] }
   }
 });
 
