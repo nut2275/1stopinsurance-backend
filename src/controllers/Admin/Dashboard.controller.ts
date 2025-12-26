@@ -1,34 +1,39 @@
 import { Request, Response } from "express";
-import PurchaseModel from "../../models/Purchase.model";
+import { FilterQuery } from "mongoose";
+import PurchaseModel, { PurchaseDocument } from "../../models/Purchase.model";
 
-export const getDashboardStats = async (req: Request, res: Response) => {
+// Interface สำหรับ Query Params
+interface DashboardQueryParams {
+    startDate?: string;
+    endDate?: string;
+}
+
+// 1. ฟังก์ชันสำหรับหน้า Dashboard
+export const getDashboardStats = async (req: Request<{}, {}, {}, DashboardQueryParams>, res: Response) => {
   try {
     const { startDate, endDate } = req.query;
 
-    // --- 1. เตรียมเงื่อนไขการกรอง (Filters) ---
-
-    // A. ตัวกรองวันที่ (Global Date Filter)
-    const dateFilter: any = {};
-    // ตัวแปรเช็คว่า "ดูทั้งหมด" หรือไม่ (เพื่อปรับกราฟเป็นรายเดือน)
+    // --- Filter Logic ---
+    // ใช้ FilterQuery จาก Mongoose เพื่อ Type Check เงื่อนไข
+    const dateFilter: FilterQuery<PurchaseDocument> = {};
     let isViewAll = true; 
 
     if (startDate && endDate) {
         dateFilter.createdAt = {
-            $gte: new Date(startDate as string),
-            $lte: new Date(endDate as string)
+            $gte: new Date(startDate),
+            $lte: new Date(endDate)
         };
-        isViewAll = false; // มีการระบุวัน แสดงว่าไม่ใช่ View All
+        isViewAll = false;
     }
 
-    // B. Match Stage: สถานะ active (ยอดขายจริง) + ช่วงเวลา
-    const successfulSalesMatch = {
+    const successfulSalesMatch: FilterQuery<PurchaseDocument> = {
         status: { $in: ['active', 'about_to_expire', 'expired'] },
         ...dateFilter
     };
 
-    // --- 2. เริ่มดึงข้อมูล (Aggregations) ---
+    // --- Aggregations ---
 
-    // 1. Global Summary (ยอดขายรวม)
+    // 1. Summary
     const summaryStats = await PurchaseModel.aggregate([
       { $match: successfulSalesMatch },
       {
@@ -58,11 +63,8 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     ]);
     const summary = summaryStats[0] || { totalRevenue: 0, totalPolicies: 0, activeAgentsCount: 0 };
 
-    // 2. ✅ Smart Sales Trend (ปรับความละเอียดกราฟตามช่วงเวลา)
-    // ถ้าดู "ทั้งหมด" (isViewAll) -> Group ตามเดือน (%Y-%m)
-    // ถ้าดู "ช่วงสั้นๆ" -> Group ตามวัน (%Y-%m-%d)
+    // 2. Sales Trend
     const dateFormat = isViewAll ? "%Y-%m" : "%Y-%m-%d";
-
     const salesTrend = await PurchaseModel.aggregate([
         { $match: successfulSalesMatch },
         {
@@ -76,16 +78,15 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         { $unwind: "$insurance" },
         {
             $group: {
-                // Dynamic Format ตรงนี้ครับ
                 _id: { $dateToString: { format: dateFormat, date: "$createdAt" } },
                 sales: { $sum: "$insurance.premium" },
                 count: { $sum: 1 }
             }
         },
-        { $sort: { _id: 1 } } // เรียงจากอดีต -> ปัจจุบัน
+        { $sort: { _id: 1 } }
     ]);
 
-    // 3. Top Performing Agents
+    // 3. Top Agents
     const topAgents = await PurchaseModel.aggregate([
         { $match: successfulSalesMatch },
         {
@@ -167,7 +168,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       { $sort: { _id: 1 } }
     ]);
 
-    // 6. Status Stats (อันนี้ปกติเราจะไม่กรองวันที่ เพื่อให้เห็นงานค้างทั้งหมดในระบบ)
+    // 6. Status Stats
     const statusStats = await PurchaseModel.aggregate([
       {
         $group: {
@@ -177,11 +178,10 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       }
     ]);
 
-    // 7. ✅ Recent Transactions (เพิ่ม Filter วันที่ + สถานะ Active)
-    // แก้ไข: ใส่ ...dateFilter เข้าไป เพื่อให้แสดงเฉพาะรายการในช่วงเวลานั้นๆ
+    // 7. Recent Transactions (Limit 10)
     const recentTransactions = await PurchaseModel.find({
         status: { $in: ['active', 'about_to_expire', 'expired'] },
-        ...dateFilter // <--- เพิ่มตรงนี้ครับ!
+        ...dateFilter
     })
         .sort({ createdAt: -1 })
         .limit(10)
@@ -194,7 +194,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 
     res.json({
       summary,
-      salesTrend, // Frontend จะได้รับเป็น รายวัน หรือ รายเดือน ตามช่วงเวลาอัตโนมัติ
+      salesTrend,
       topAgents,
       brandPreference,
       levelStats,
@@ -202,8 +202,40 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       recentTransactions
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Admin Dashboard Error:", error);
-    res.status(500).json({ error: error.message || "Internal Server Error" });
+    const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
+    res.status(500).json({ error: errorMessage });
+  }
+};
+
+// ✅ 2. ฟังก์ชันใหม่: สำหรับ Export ข้อมูลดิบทั้งหมด (Unlimited)
+export const getExportData = async (req: Request<{}, {}, {}, DashboardQueryParams>, res: Response) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    const dateFilter: FilterQuery<PurchaseDocument> = {};
+    if (startDate && endDate) {
+        dateFilter.createdAt = {
+            $gte: new Date(startDate),
+            $lte: new Date(endDate)
+        };
+    }
+
+    const allTransactions = await PurchaseModel.find({
+        status: { $in: ['active', 'about_to_expire', 'expired'] },
+        ...dateFilter
+    })
+    .sort({ createdAt: -1 })
+    .populate('agent_id', 'first_name last_name')
+    .populate('customer_id', 'first_name last_name')
+    .populate('carInsurance_id', 'insuranceBrand premium level policy_number');
+
+    res.json(allTransactions);
+
+  } catch (error: unknown) {
+    console.error("Export Error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
+    res.status(500).json({ error: errorMessage });
   }
 };
