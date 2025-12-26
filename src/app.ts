@@ -12,6 +12,7 @@ import AdminCustomer from './routes/Admin/Customer.routes';
 import CarMasterRoutes from './routes/Admin/CarMaster.routes';
 import agentMasterRoutes from './routes/Admin/agentMaster.routes';
 import notificationRoutes from "./routes/Notifications.routes";
+import adminDashboardRoutes from './routes/Admin/Dashboard.routes';
 
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
@@ -41,7 +42,10 @@ app.use('/admin', AdminCustomer);
 // Admin Routes
 app.use('/car-master', CarMasterRoutes);
 app.use('/api/admin/agents', agentMasterRoutes);
+app.use('/admin/dashboard', adminDashboardRoutes);
 
 app.use("/api", notificationRoutes);
+
+
 
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
