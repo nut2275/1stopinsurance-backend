@@ -8,7 +8,7 @@ import customerRoutes from './routes/Customer.routes';
 import agentRoutes from './routes/Agent.routes';
 import carInsuranceRate from './routes/CarInsuranceRate.routes';
 import PurchaseRoutes from './routes/Purchase.routes';
-import AdminCustomer from './routes/Admin/Customer.routes';
+import adminRoutes from './routes/Admin/Customer.routes';
 import CarMasterRoutes from './routes/Admin/CarMaster.routes';
 import agentMasterRoutes from './routes/Admin/agentMaster.routes';
 import notificationRoutes from "./routes/Notifications.routes";
@@ -37,9 +37,10 @@ app.use('/customers', customerRoutes);
 app.use('/agents', agentRoutes);
 app.use('/api', carInsuranceRate);
 app.use('/purchase', PurchaseRoutes);
-app.use('/admin', AdminCustomer);
+
 
 // Admin Routes
+app.use('/admin', adminRoutes);
 app.use('/car-master', CarMasterRoutes);
 app.use('/api/admin/agents', agentMasterRoutes);
 app.use('/admin/dashboard', adminDashboardRoutes);
