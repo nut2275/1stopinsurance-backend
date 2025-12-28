@@ -169,10 +169,12 @@ export const getPurchaseDocuments = async (req: Request, res: Response) => {
 export const getAllPurchases = async (req: Request, res: Response) => {
   try {
     const purchases = await Purchase.find()
-      .populate("customer_id", "first_name last_name username") 
+      // ✅ [FIXED] เพิ่ม email, phone, imgProfile_customer
+      .populate("customer_id", "first_name last_name username imgProfile_customer email phone") 
       .populate("agent_id", "first_name last_name") 
-      .populate("car_id", "registration brand carModel year color province") 
-      .populate("carInsurance_id", "insuranceBrand level") 
+      .populate("car_id", "registration brand carModel subModel year color province") 
+      // ✅ [FIXED] เพิ่ม premium
+      .populate("carInsurance_id", "insuranceBrand level premium") 
       .sort({ createdAt: -1 });
 
     res.status(200).json(purchases);
@@ -189,7 +191,7 @@ export const updatePurchaseAdmin = async (req: Request, res: Response) => {
       status, policy_number, start_date, end_date, paymentMethod,
       paymentSlipImage, policyFile, citizenCardImage, carRegistrationImage, installmentDocImage, consentFormImage,
       customer_first_name, customer_last_name,
-      car_brand, car_model, car_year, car_color, car_registration, car_province,
+      car_brand, car_model, car_submodel, car_year, car_color, car_registration, car_province,
       insurance_brand, insurance_level,
       reject_reason
     } = req.body;
@@ -208,8 +210,13 @@ export const updatePurchaseAdmin = async (req: Request, res: Response) => {
     // 2. แก้ข้อมูลรถ
     if (purchase.car_id) {
       await Car.findByIdAndUpdate(purchase.car_id, {
-        brand: car_brand, carModel: car_model, year: car_year, 
-        color: car_color, registration: car_registration, province: car_province
+        brand: car_brand, 
+        carModel: car_model, 
+        subModel: car_submodel, 
+        year: car_year, 
+        color: car_color, 
+        registration: car_registration, 
+        province: car_province
       });
     }
 
@@ -235,7 +242,10 @@ export const updatePurchaseAdmin = async (req: Request, res: Response) => {
     if (consentFormImage) updateData.consentFormImage = consentFormImage;
 
     const updatedPurchase = await Purchase.findByIdAndUpdate(id, updateData, { new: true })
-        .populate("customer_id").populate("car_id").populate("carInsurance_id");
+        // ✅ [FIXED] เพิ่ม email, phone
+        .populate("customer_id", "first_name last_name username imgProfile_customer email phone")
+        .populate("car_id")
+        .populate("carInsurance_id");
 
     res.status(200).json({ message: "Update success", data: updatedPurchase });
 
