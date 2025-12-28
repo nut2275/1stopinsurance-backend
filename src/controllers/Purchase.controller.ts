@@ -270,10 +270,11 @@ export const getAgentHistory = async (req: Request, res: Response) => {
         }
 
         const purchases = await Purchase.find({ agent_id: agentId })
+            // ✅ เพิ่ม email, phone
             .populate("customer_id", "first_name last_name username email phone imgProfile_customer") 
             .populate("car_id")
-            .populate("carInsurance_id")
-            // ✅ เพิ่มบรรทัดนี้ครับ
+            // ✅ เพิ่ม premium
+            .populate("carInsurance_id", "insuranceBrand level premium") 
             .populate("agent_id", "first_name last_name") 
             .sort({ createdAt: -1 });
 
@@ -295,7 +296,6 @@ export const updatePurchaseAgent = async (req: Request, res: Response) => {
         const {
              status, policy_number, start_date, end_date, paymentMethod,
              paymentSlipImage, policyFile, citizenCardImage, carRegistrationImage, installmentDocImage, consentFormImage,
-             // ✅ รับ subModel มาด้วย (car_submodel)
              car_brand, car_model, car_submodel, car_year, car_color, car_registration, car_province,
              insurance_brand, insurance_level,
              reject_reason
@@ -312,7 +312,7 @@ export const updatePurchaseAgent = async (req: Request, res: Response) => {
              await Car.findByIdAndUpdate(purchase.car_id, {
                  brand: car_brand, 
                  carModel: car_model, 
-                 subModel: car_submodel, // ✅ เพิ่มบรรทัดนี้
+                 subModel: car_submodel, // ✅ อัปเดตรุ่นย่อย
                  year: car_year, 
                  color: car_color, 
                  registration: car_registration, 
@@ -320,7 +320,7 @@ export const updatePurchaseAgent = async (req: Request, res: Response) => {
              });
         }
  
-        // Update Insurance Info
+        // Update Insurance Info (ถ้า Agent มีสิทธิ์แก้แผน)
         if (purchase.carInsurance_id) {
              await CarInsurance.findByIdAndUpdate(purchase.carInsurance_id, {
                  insuranceBrand: insurance_brand, level: insurance_level
@@ -341,10 +341,10 @@ export const updatePurchaseAgent = async (req: Request, res: Response) => {
         if (consentFormImage) updateData.consentFormImage = consentFormImage;
  
         const updatedPurchase = await Purchase.findByIdAndUpdate(id, updateData, { new: true })
-             // ✅ เพิ่ม imgProfile ตอน return กลับไปด้วย (เผื่อเอาไปใช้ต่อ)
-             .populate("customer_id", "first_name last_name username imgProfile_customer")
+             // ✅ Populate ข้อมูลกลับไปให้ครบ
+             .populate("customer_id", "first_name last_name username email phone imgProfile_customer")
              .populate("car_id")
-             .populate("carInsurance_id")
+             .populate("carInsurance_id", "insuranceBrand level premium")
              .populate("agent_id", "first_name last_name");
  
         res.status(200).json({ message: "Agent update success", data: updatedPurchase });
