@@ -13,6 +13,7 @@ import CarMasterRoutes from './routes/Admin/CarMaster.routes';
 import agentMasterRoutes from './routes/Admin/agentMaster.routes';
 import notificationRoutes from "./routes/Notifications.routes";
 import adminDashboardRoutes from './routes/Admin/Dashboard.routes';
+import { startCronJobs } from './services/cronService';
 
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
@@ -48,5 +49,15 @@ app.use('/admin/dashboard', adminDashboardRoutes);
 app.use("/api", notificationRoutes);
 
 
+connectDB().then(() => {
+    
+    // เริ่มต้นระบบตั้งเวลา
+    startCronJobs(); 
+    
+    // เริ่มต้นรับ Request
+    app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
 
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+}).catch((err) => {
+    console.error("❌ Database connection failed", err);
+    process.exit(1); // ปิดโปรแกรมถ้าต่อ DB ไม่ได้
+});

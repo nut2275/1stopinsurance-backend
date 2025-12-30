@@ -5,7 +5,7 @@ export interface INotification extends Document {
   recipientId: string;
   sender?: {
     name: string;
-    role: 'admin' | 'agent' | 'customer';
+    role: 'admin' | 'agent' | 'customer' | 'System';
   };
   recipientType: 'agent' | 'customer' | 'admin';
   message: string;
@@ -48,7 +48,7 @@ const NotificationSchema: Schema<INotification> = new Schema({
   },
   sender: {
     name: { type: String },
-    role: { type: String, enum: ['admin', 'agent', 'customer', 'guest'] }
+    role: { type: String, enum: ['admin', 'agent', 'customer', 'guest', 'System'] }
   }
 });
 
