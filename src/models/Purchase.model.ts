@@ -63,10 +63,10 @@ const PurchaseSchema = new Schema<PurchaseDocument>(
     },
 
     purchase_date: { type: Date, required: true, default: Date.now },
-    start_date: { type: Date, required: true, default: Date.now },
+    start_date: { type: Date, default: null },
     
     // ✅ เพิ่ม Field วันสิ้นสุดลงใน Schema
-    end_date: { type: Date, required: false },
+    end_date: { type: Date, required: false, default: null },
 
     policy_number: { type: String, required: false }, // แนะนำ: เอา unique: true ออกถ้ายังไม่มีระบบ Gen เลขที่แน่นอน หรือใช้ sparse: true
 

@@ -259,6 +259,55 @@ export const updatePurchaseAdmin = async (req: Request, res: Response) => {
 // 🟢 SECTION: AGENT CONTROLLERS (New!)
 // ---------------------------------------------------------
 
+
+
+// ฟังก์ชันสำหรับ "ตรวจสุขภาพกรมธรรม์" และอัปเดตสถานะอัตโนมัติ
+const autoUpdateStatus = async (agentId: mongoose.Types.ObjectId) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // เคลียร์เวลาให้เป็นเที่ยงคืน
+
+    const next60Days = new Date(today);
+    next60Days.setDate(today.getDate() + 60);
+
+    // 1️⃣ เคส: หมดอายุแล้ว (เลยกำหนด End Date)
+    // เปลี่ยน Active/About_to_expire -> Expired
+    await Purchase.updateMany(
+        {
+            agent_id: agentId,
+            status: { $in: ['active', 'about_to_expire'] }, // สถานะที่ต้องเช็ค
+            end_date: { $lt: today } // วันสิ้นสุด "น้อยกว่า" วันนี้
+        },
+        { $set: { status: 'expired' } }
+    );
+
+    // 2️⃣ เคส: ใกล้หมดอายุ (เหลือ 0-60 วัน)
+    // เปลี่ยน Active -> About_to_expire
+    // (ต้องเช็คว่า end_date >= today เพื่อไม่ให้ทับกับเคส Expired)
+    await Purchase.updateMany(
+        {
+            agent_id: agentId,
+            status: 'active', // เช็คเฉพาะ Active (ถ้าเป็น Expired แล้วไม่ต้องยุ่ง)
+            end_date: { 
+                $gte: today, 
+                $lte: next60Days 
+            }
+        },
+        { $set: { status: 'about_to_expire' } }
+    );
+    
+    // (Optional) 3️⃣ เคส: ต่ออายุแล้วแต่สถานะยังค้าง (เช่น แก้ไขวันที่หนีไปปีหน้าแล้ว)
+    // เปลี่ยน About_to_expire -> Active
+    await Purchase.updateMany(
+        {
+            agent_id: agentId,
+            status: 'about_to_expire',
+            end_date: { $gt: next60Days } // วันสิ้นสุด "มากกว่า" 60 วัน (ปลอดภัยแล้ว)
+        },
+        { $set: { status: 'active' } }
+    );
+};
+
+
 /* ✅ 1. ดึงประวัติการขายเฉพาะของ Agent คนนั้น */
 export const getAgentHistory = async (req: Request, res: Response) => {
     try {
@@ -269,6 +318,7 @@ export const getAgentHistory = async (req: Request, res: Response) => {
             return res.status(401).json({ message: "Unauthorized: Agent ID not found" });
         }
 
+        await autoUpdateStatus(agentId);
         const purchases = await Purchase.find({ agent_id: agentId })
             // ✅ เพิ่ม email, phone
             .populate("customer_id", "first_name last_name username email phone imgProfile_customer") 

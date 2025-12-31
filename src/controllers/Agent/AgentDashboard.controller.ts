@@ -14,37 +14,43 @@ export const getAgentCustomerStats = async (req: Request, res: Response) => {
 
     const agentId = new mongoose.Types.ObjectId(id);
 
-    // --- 1. เตรียมเงื่อนไขการกรอง (Filters) ---
+    // ----------------------------------------------------
+    // ✅ 1. แก้ไข Logic Sales Trend (กราฟยอดขาย)
+    // เปลี่ยนจากดู createdAt เป็น start_date (วันเริ่มคุ้มครอง)
+    // ----------------------------------------------------
 
-    // A. ตัวกรองวันที่ (ใช้กับยอดขายและกราฟวิเคราะห์)
-    const dateFilter: any = {};
+    // สร้างเงื่อนไขการกรองวันที่สำหรับยอดขาย
+    const salesDateMatch: any = {
+        agent_id: agentId,
+        // เอาเฉพาะสถานะที่ถือว่า "ขายได้แล้ว"
+        status: { $in: ['active', 'about_to_expire', 'expired'] }, 
+        // ต้องมีวันเริ่มคุ้มครอง (กันเหนียว)
+        start_date: { $ne: null } 
+    };
+
+    // ถ้ามีการส่งตัวกรองวันที่มา ให้กรองจาก start_date
     if (startDate && endDate) {
-        dateFilter.createdAt = {
+        salesDateMatch.start_date = { 
             $gte: new Date(startDate as string),
             $lte: new Date(endDate as string)
         };
     }
 
-    // B. Match Stage สำหรับ "ยอดขายที่สำเร็จแล้ว" (Active Sales)
-    // ใช้คำนวณรายได้, กราฟเส้น, และกราฟวงกลม
-    const successfulSalesMatch = {
-        agent_id: agentId,
-        status: { $in: ['active', 'about_to_expire', 'expired'] }, // นับเฉพาะที่จ่ายเงินและอนุมัติแล้ว
-        ...dateFilter // ใส่กรองวันที่
-    };
-
-    // C. Match Stage สำหรับ "งานปัจจุบัน" (Operational Tasks)
-    // ไม่กรองวันที่ เพราะงานค้างคืองานค้าง ไม่ว่าจะเข้ามาเมื่อไหร่
+    // ----------------------------------------------------
+    // ✅ 2. เตรียม Logic งานปัจจุบัน (Operational Tasks)
+    // ไม่ต้องกรองวันที่ เพราะต้องเห็นงานค้างทั้งหมด
+    // ----------------------------------------------------
     const allTasksMatch = {
         agent_id: agentId
     };
 
 
-    // --- 2. เริ่มดึงข้อมูล (Aggregations) ---
+    // --- 3. เริ่มดึงข้อมูล (Aggregations) ---
 
-    // 1. Summary Stats (ยอดขายรวม & จำนวนกรมธรรม์)
+    // 1. Summary Stats (ยอดขายรวม)
+    // แก้ให้ใช้ salesDateMatch (อิง start_date)
     const summaryStats = await PurchaseModel.aggregate([
-      { $match: successfulSalesMatch },
+      { $match: salesDateMatch },
       {
         $lookup: {
           from: 'carinsurancerates',
@@ -65,8 +71,9 @@ export const getAgentCustomerStats = async (req: Request, res: Response) => {
     const summary = summaryStats[0] || { totalRevenue: 0, totalPolicies: 0 };
 
     // 2. Sales Trend (แนวโน้มยอดขายรายวัน)
+    // ✅ แก้ Group เป็น $start_date
     const salesTrend = await PurchaseModel.aggregate([
-        { $match: successfulSalesMatch },
+        { $match: salesDateMatch },
         {
             $lookup: {
                 from: 'carinsurancerates',
@@ -78,18 +85,19 @@ export const getAgentCustomerStats = async (req: Request, res: Response) => {
         { $unwind: "$insurance" },
         {
             $group: {
-                // จัดกลุ่มตามวันที่ YYYY-MM-DD
-                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                // Group ตามวันเริ่มคุ้มครอง
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$start_date" } }, 
                 sales: { $sum: "$insurance.premium" },
                 count: { $sum: 1 }
             }
         },
-        { $sort: { _id: 1 } } // เรียงจากอดีต -> ปัจจุบัน
+        { $sort: { _id: 1 } }
     ]);
 
     // 3. Top Customers (ลูกค้า Top Spender)
+    // ใช้ salesDateMatch เพื่อให้สอดคล้องกับยอดขาย
     const topCustomers = await PurchaseModel.aggregate([
-      { $match: successfulSalesMatch },
+      { $match: salesDateMatch },
       {
         $lookup: {
           from: 'carinsurancerates',
@@ -128,20 +136,33 @@ export const getAgentCustomerStats = async (req: Request, res: Response) => {
       }
     ]);
 
-    // 4. Renewing Customers (แจ้งเตือนต่ออายุ)
-    // อันนี้ Fix สถานะ about_to_expire ไม่ต้องสน Date Filter เพราะดูอนาคต
+    // ----------------------------------------------------
+    // ✅ 4. Renewing Customers (แจ้งเตือนต่ออายุ)
+    // แก้ไข: ไม่สนสถานะ about_to_expire แต่ดู active + วันหมดอายุใกล้ถึงแทน
+    // ----------------------------------------------------
+    
+    const today = new Date();
+    const next60Days = new Date();
+    next60Days.setDate(today.getDate() + 60); // แจ้งเตือนล่วงหน้า 60 วัน
+
     const renewingCustomers = await PurchaseModel.find({ 
         agent_id: agentId, 
-        status: 'about_to_expire' 
+        // เงื่อนไข: ต้องเป็น Active หรือ About to expire
+        status: { $in: ['active', 'about_to_expire'] },
+        // เงื่อนไข: วันหมดอายุต้องอยู่ในช่วง วันนี้ ถึง 60 วันข้างหน้า
+        end_date: { 
+            $gte: today, 
+            $lte: next60Days 
+        }
     })
     .populate('customer_id', 'first_name last_name phone imgProfile_customer')
     .populate('car_id', 'registration brand carModel')
+    .sort({ end_date: 1 }) // เรียงวันหมดอายุที่ใกล้สุดขึ้นก่อน
     .limit(10);
 
-    // 5. Brand Preference (✅ แก้ไข: ใช้ successfulSalesMatch)
-    // ตัดพวก Pending ทิ้ง เพื่อนับเฉพาะส่วนแบ่งการตลาดจริง
+    // 5. Brand Preference
     const brandPreference = await PurchaseModel.aggregate([
-      { $match: successfulSalesMatch }, 
+      { $match: salesDateMatch }, 
       {
         $lookup: {
           from: 'carinsurancerates',
@@ -161,7 +182,7 @@ export const getAgentCustomerStats = async (req: Request, res: Response) => {
 
     // 6. Level Stats (ยอดขายแยกตามชั้น)
     const levelStats = await PurchaseModel.aggregate([
-      { $match: successfulSalesMatch },
+      { $match: salesDateMatch },
       {
         $lookup: {
           from: 'carinsurancerates',
