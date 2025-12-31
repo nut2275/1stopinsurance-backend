@@ -8,32 +8,90 @@ interface DashboardQueryParams {
     endDate?: string;
 }
 
+// ✅ 0. ฟังก์ชันอัปเดตสถานะ "ทั้งระบบ" (Global Auto Update)
+// ไม่รับ agentId เพราะ Admin ต้องเช็คทุกกรมธรรม์ในโลก
+const autoUpdateAllStatuses = async () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const next60Days = new Date(today);
+    next60Days.setDate(today.getDate() + 60);
+
+    // 1. หมดอายุแล้ว (ทุก Agent)
+    await PurchaseModel.updateMany(
+        {
+            status: { $in: ['active', 'about_to_expire'] },
+            end_date: { $lt: today }
+        },
+        { $set: { status: 'expired' } }
+    );
+
+    // 2. ใกล้หมดอายุ (ทุก Agent)
+    await PurchaseModel.updateMany(
+        {
+            status: 'active',
+            end_date: { $gte: today, $lte: next60Days }
+        },
+        { $set: { status: 'about_to_expire' } }
+    );
+
+    // 3. (Optional) แก้สถานะกลับถ้ามีการเลื่อนวันที่
+    await PurchaseModel.updateMany(
+        {
+            status: 'about_to_expire',
+            end_date: { $gt: next60Days }
+        },
+        { $set: { status: 'active' } }
+    );
+};
+
+// 1. ฟังก์ชันสำหรับหน้า Dashboard
 // 1. ฟังก์ชันสำหรับหน้า Dashboard
 export const getDashboardStats = async (req: Request<{}, {}, {}, DashboardQueryParams>, res: Response) => {
   try {
     const { startDate, endDate } = req.query;
 
+    // ✅ สั่งอัปเดตสถานะทั้งระบบก่อนดึงข้อมูล
+    await autoUpdateAllStatuses();
+
     // --- Filter Logic ---
-    // ใช้ FilterQuery จาก Mongoose เพื่อ Type Check เงื่อนไข
-    const dateFilter: FilterQuery<PurchaseDocument> = {};
-    let isViewAll = true; 
+    const successfulSalesMatch: FilterQuery<PurchaseDocument> = {
+        status: { $in: ['active', 'about_to_expire', 'expired'] },
+        start_date: { $ne: null } 
+    };
 
     if (startDate && endDate) {
-        dateFilter.createdAt = {
+        successfulSalesMatch.start_date = {
             $gte: new Date(startDate),
             $lte: new Date(endDate)
         };
-        isViewAll = false;
     }
 
-    const successfulSalesMatch: FilterQuery<PurchaseDocument> = {
-        status: { $in: ['active', 'about_to_expire', 'expired'] },
-        ...dateFilter
-    };
+    // --- 🛠️ Logic การจัดกลุ่มวันที่ (3 Tiers: วัน / สัปดาห์ / เดือน) ---
+    
+    // Default: ถ้าดู "ทั้งหมด" (All) ให้เป็นรายเดือนไว้ก่อน (กันกราฟพังถ้าข้อมูลเยอะ)
+    let dateFormat = "%Y-%m"; 
+
+    if (startDate && endDate) {
+        const start = new Date(startDate).getTime();
+        const end = new Date(endDate).getTime();
+        const diffDays = Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24));
+
+        if (diffDays <= 90) { 
+            // Tier 1: น้อยกว่า 90 วัน -> รายวัน (%Y-%m-%d)
+            dateFormat = "%Y-%m-%d";
+        } else if (diffDays <= 365 * 5) { 
+            // Tier 2: 90 วัน ถึง 5 ปี -> รายสัปดาห์ (%Y-%U) ✅
+            dateFormat = "%Y-%U";
+        } else {
+            // Tier 3: มากกว่า 5 ปี -> รายเดือน (%Y-%m)
+            dateFormat = "%Y-%m";
+        }
+    }
 
     // --- Aggregations ---
 
-    // 1. Summary
+    // 1. Summary (ภาพรวมทั้งบริษัท)
     const summaryStats = await PurchaseModel.aggregate([
       { $match: successfulSalesMatch },
       {
@@ -63,8 +121,7 @@ export const getDashboardStats = async (req: Request<{}, {}, {}, DashboardQueryP
     ]);
     const summary = summaryStats[0] || { totalRevenue: 0, totalPolicies: 0, activeAgentsCount: 0 };
 
-    // 2. Sales Trend
-    const dateFormat = isViewAll ? "%Y-%m" : "%Y-%m-%d";
+    // 2. Sales Trend (กราฟยอดขาย)
     const salesTrend = await PurchaseModel.aggregate([
         { $match: successfulSalesMatch },
         {
@@ -78,7 +135,8 @@ export const getDashboardStats = async (req: Request<{}, {}, {}, DashboardQueryP
         { $unwind: "$insurance" },
         {
             $group: {
-                _id: { $dateToString: { format: dateFormat, date: "$createdAt" } },
+                // ✅ Group ตาม dateFormat ที่เราคำนวณข้างบน
+                _id: { $dateToString: { format: dateFormat, date: "$start_date" } }, 
                 sales: { $sum: "$insurance.premium" },
                 count: { $sum: 1 }
             }
@@ -86,7 +144,7 @@ export const getDashboardStats = async (req: Request<{}, {}, {}, DashboardQueryP
         { $sort: { _id: 1 } }
     ]);
 
-    // 3. Top Agents
+    // 3. Top Agents (จัดอันดับ Agent)
     const topAgents = await PurchaseModel.aggregate([
         { $match: successfulSalesMatch },
         {
@@ -178,10 +236,10 @@ export const getDashboardStats = async (req: Request<{}, {}, {}, DashboardQueryP
       }
     ]);
 
-    // 7. Recent Transactions (Limit 10)
+    // 7. Recent Transactions (รายการล่าสุด)
     const recentTransactions = await PurchaseModel.find({
         status: { $in: ['active', 'about_to_expire', 'expired'] },
-        ...dateFilter
+        // start_date: successfulSalesMatch.start_date 
     })
         .sort({ createdAt: -1 })
         .limit(10)
@@ -209,24 +267,26 @@ export const getDashboardStats = async (req: Request<{}, {}, {}, DashboardQueryP
   }
 };
 
-// ✅ 2. ฟังก์ชันใหม่: สำหรับ Export ข้อมูลดิบทั้งหมด (Unlimited)
+// ✅ 2. Export Data (แก้ให้ตรง Logic)
 export const getExportData = async (req: Request<{}, {}, {}, DashboardQueryParams>, res: Response) => {
   try {
     const { startDate, endDate } = req.query;
     
-    const dateFilter: FilterQuery<PurchaseDocument> = {};
+    // ✅ แก้ไข: ใช้ start_date ในการกรอง Export
+    const filter: FilterQuery<PurchaseDocument> = {
+        status: { $in: ['active', 'about_to_expire', 'expired'] },
+        start_date: { $ne: null }
+    };
+
     if (startDate && endDate) {
-        dateFilter.createdAt = {
+        filter.start_date = {
             $gte: new Date(startDate),
             $lte: new Date(endDate)
         };
     }
 
-    const allTransactions = await PurchaseModel.find({
-        status: { $in: ['active', 'about_to_expire', 'expired'] },
-        ...dateFilter
-    })
-    .sort({ createdAt: -1 })
+    const allTransactions = await PurchaseModel.find(filter)
+    .sort({ start_date: -1 }) // เรียงตามวันคุ้มครอง
     .populate('agent_id', 'first_name last_name')
     .populate('customer_id', 'first_name last_name')
     .populate('carInsurance_id', 'insuranceBrand premium level policy_number');
