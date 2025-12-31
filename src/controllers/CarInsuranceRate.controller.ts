@@ -148,9 +148,9 @@ export const updateInsuranceRate = async (req: Request, res: Response) => {
     const updateFields: CarInsuranceRateOop = req.body;
     
     // 3. ป้องกันการอัปเดต ID (Optional แต่แนะนำ)
-    if ('_id' in updateFields) {
-        delete updateFields._id;
-    }
+    // if ('_id' in updateFields) {
+    //     delete updateFields._id;
+    // }
 
     // 4. ตรวจสอบความถูกต้องของ ID (ถ้าเป็นไปได้)
     if (!id) {
