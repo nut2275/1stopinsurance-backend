@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { 
-    getYears, getBrands, getModels, getSubModels, 
+    getYears, getBrands, getModels, getSubModels, getYearsByFilter,
     createBulk, importExcel,
     getCarMasters, updateCarMaster, deleteCarMaster
 } from '../../controllers/Admin/CarMaster.controller';
@@ -15,6 +15,7 @@ router.get('/years', getYears);
 router.get('/brands', getBrands);
 router.get('/models', getModels);
 router.get('/sub-models', getSubModels);
+router.get('/years-filter', getYearsByFilter);
 
 // Admin Manage
 router.post('/bulk', createBulk);

@@ -84,6 +84,28 @@ export const getSubModels = async (req: Request, res: Response) => {
     }
 };
 
+// ✅ [NEW] API ใหม่สำหรับดึงปีแบบกรองตาม ยี่ห้อ/รุ่น (ใช้ในหน้า Edit Modal)
+export const getYearsByFilter = async (req: Request, res: Response) => {
+    try {
+        const { brand, model, subModel } = req.query;
+        
+        const filter: any = {};
+
+        // ถ้ามีการส่งค่ามา ให้เพิ่มเงื่อนไขการกรอง
+        if (brand) filter.brand = String(brand);
+        if (model) filter.carModel = String(model); // Map 'model' -> 'carModel'
+        if (subModel) filter.subModel = String(subModel);
+
+        // ค้นหาปีเฉพาะที่ตรงกับเงื่อนไข
+        const years = await CarMasterModel.find(filter).distinct('year');
+        
+        years.sort((a, b) => b - a); // เรียงจากปีปัจจุบัน -> อดีต
+        res.status(200).json(years);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching filtered years" });
+    }
+};
+
 // ==========================================
 // Part 2: APIs สำหรับ Admin (Import Data)
 // ==========================================
