@@ -8,51 +8,13 @@ interface DashboardQueryParams {
     endDate?: string;
 }
 
-// ✅ 0. ฟังก์ชันอัปเดตสถานะ "ทั้งระบบ" (Global Auto Update)
-// ไม่รับ agentId เพราะ Admin ต้องเช็คทุกกรมธรรม์ในโลก
-const autoUpdateAllStatuses = async () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
 
-    const next60Days = new Date(today);
-    next60Days.setDate(today.getDate() + 60);
-
-    // 1. หมดอายุแล้ว (ทุก Agent)
-    await PurchaseModel.updateMany(
-        {
-            status: { $in: ['active', 'about_to_expire'] },
-            end_date: { $lt: today }
-        },
-        { $set: { status: 'expired' } }
-    );
-
-    // 2. ใกล้หมดอายุ (ทุก Agent)
-    await PurchaseModel.updateMany(
-        {
-            status: 'active',
-            end_date: { $gte: today, $lte: next60Days }
-        },
-        { $set: { status: 'about_to_expire' } }
-    );
-
-    // 3. (Optional) แก้สถานะกลับถ้ามีการเลื่อนวันที่
-    await PurchaseModel.updateMany(
-        {
-            status: 'about_to_expire',
-            end_date: { $gt: next60Days }
-        },
-        { $set: { status: 'active' } }
-    );
-};
 
 // 1. ฟังก์ชันสำหรับหน้า Dashboard
 // 1. ฟังก์ชันสำหรับหน้า Dashboard
 export const getDashboardStats = async (req: Request<{}, {}, {}, DashboardQueryParams>, res: Response) => {
   try {
     const { startDate, endDate } = req.query;
-
-    // ✅ สั่งอัปเดตสถานะทั้งระบบก่อนดึงข้อมูล
-    await autoUpdateAllStatuses();
 
     // --- Filter Logic ---
     const successfulSalesMatch: FilterQuery<PurchaseDocument> = {
