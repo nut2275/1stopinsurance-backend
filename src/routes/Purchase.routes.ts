@@ -6,8 +6,9 @@ import {
     getPurchaseById,
     getAllPurchases,
     updatePurchaseAdmin,
-    getAgentHistory,       // ✅ Import
-    updatePurchaseAgent    // ✅ Import
+    getAgentHistory,
+    updatePurchaseAgent,
+    getPurchaseCount
     
 } from "../controllers/Purchase.controller";
 import { getAgentCustomerStats } from "../controllers/Agent/AgentDashboard.controller";
@@ -17,6 +18,7 @@ import { verifyToken, isAgent, isAdmin } from "../middleware/auth";
 const router = express.Router();
 
 // --- Public / Customer ---
+router.get("/count", getPurchaseCount);
 router.post("/insurance", createPurchase);
 router.get("/customer/:customer_id", getPurchasesByCustomerId);
 router.get("/:id/documents", getPurchaseDocuments);
