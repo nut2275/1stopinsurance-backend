@@ -404,3 +404,16 @@ export const updatePurchaseAgent = async (req: Request, res: Response) => {
         res.status(500).json({ message: "Server error", error });
     }
 };
+
+export const getPurchaseCount = async (req: Request, res: Response) => {
+  try {
+    // ใช้คำสั่ง countDocuments() ของ Mongoose เพื่อนับจำนวนทั้งหมด
+    const count = await Purchase.countDocuments();
+    
+    // ส่งค่ากลับไปเป็น JSON
+    res.status(200).json({ count });
+  } catch (error) {
+    console.error("Error counting purchases:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
