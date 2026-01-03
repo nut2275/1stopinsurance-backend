@@ -18,7 +18,6 @@ export interface CarInsuranceRateOop extends Document {
   fireFloodCoverage?: number;
   firstLossCoverage?: number;
   premium?: number;
-  img?: string;
 }
 
 const carInsuranceSchema = new Schema<CarInsuranceRateOop>(

@@ -103,17 +103,6 @@ const PurchaseSchema = new Schema<PurchaseDocument>(
 );
 
 
-// 1. Index สำหรับการกรองใน Dashboard (Status + วันที่) -> แก้ช้าจุดที่ 1
-PurchaseSchema.index({ status: 1, start_date: 1 });
-
-// 2. Index สำหรับการ Join ตาราง ($lookup) -> แก้ช้าจุดที่ 2 (สำคัญมาก)
-PurchaseSchema.index({ carInsurance_id: 1 });
-PurchaseSchema.index({ agent_id: 1 });
-PurchaseSchema.index({ customer_id: 1 });
-
-// 3. Index สำหรับเรียงลำดับรายการล่าสุด (Recent Transactions) -> แก้ช้าจุดที่ 3
-PurchaseSchema.index({ createdAt: -1 });
-
 
 const PurchaseModel: Model<PurchaseDocument> = mongoose.model<PurchaseDocument>(
   'Purchase',

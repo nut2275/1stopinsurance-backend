@@ -117,7 +117,7 @@ export const startCronJobs = () => {
   // สั่งทำงานทันที 1 ครั้งเมื่อเริ่ม Server
   console.log('🚀 Server Started: Running initial policy check...');
   checkExpiringPolicies();
-  autoUpdateAllStatuses();
+  // autoUpdateAllStatuses();
 
   // ทำงานทุกวัน เวลา 00:00 น.
   cron.schedule('0 0 * * *', () => {
