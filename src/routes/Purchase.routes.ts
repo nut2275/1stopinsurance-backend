@@ -30,7 +30,7 @@ router.put("/admin/:id", updatePurchaseAdmin);
 
 // --- Agent ---
 // ✅ ใช้ verifyToken (เพื่อแตก req.user) และ isAgent (เพื่อกันคนอื่น)
-router.get("/agent/my-history", verifyToken, isAgent, getAgentHistory);
+router.get("/agent/my-history", verifyToken, isAgent, getAgentHistory); 
 router.put("/agent/:id", verifyToken, isAgent, updatePurchaseAgent);
 
 // ✅ เพิ่ม Route สำหรับดึงสถิติ Dashboard
