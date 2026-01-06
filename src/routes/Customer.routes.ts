@@ -7,7 +7,8 @@ import {
   getCustomerById,
   updateCustomer,
   // deleteCustomer,
-  getProfile 
+  getProfile,
+  getCustomerStats
 } from '../controllers/Customer.controller';
 
 
@@ -15,6 +16,7 @@ const router = Router();
 // ------------------------
 // PUBLIC ROUTES
 // ------------------------
+router.get("/stats", getCustomerStats);
 // Register
 router.post('/register', createCustomer);
 // Login
