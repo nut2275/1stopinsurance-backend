@@ -218,3 +218,26 @@ export const deleteCustomer = async (req: Request, res: Response) => {
 };
 
 
+export const getCustomerStats = async (req: Request, res: Response) => {
+  try {
+    // 1. นับจำนวนลูกค้าทั้งหมด
+    const count = await Customer.countDocuments();
+
+    // 2. ดึงรูปโปรไฟล์ลูกค้าล่าสุด 3 คน (ที่มีรูป) มาแสดง
+    const samples = await Customer.find({ 
+        imgProfile_customer: { $exists: true, $ne: "" } // หาคนที่มีรูป
+    })
+    .select('imgProfile_customer') // เอาแค่ field รูป
+    .sort({ createdAt: -1 })       // เอาคนใหม่ล่าสุด
+    .limit(3);                     // เอาแค่ 3 คน
+
+    res.status(200).json({ 
+        count, 
+        samples: samples.map(c => c.imgProfile_customer) 
+    });
+
+  } catch (error) {
+    console.error("Error fetching customer stats:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
