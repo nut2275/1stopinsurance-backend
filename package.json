@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "start": "ts-node src/app.ts",
+    "start": "node dist/services/app.js",
+    "test": "ts-node src/app.ts",
     "dev": "nodemon --watch src/**/*.ts --exec ts-node src/app.ts"
   },
   "keywords": [],
@@ -35,6 +35,6 @@
     "@types/node-cron": "^3.0.11",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   }
 }
