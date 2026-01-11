@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "test": "ts-node src/app.ts",
     "build": "tsc",
     "start": "node dist/services/app.js",
-    "test": "ts-node src/app.ts",
     "dev": "nodemon --watch src/**/*.ts --exec ts-node src/app.ts"
   },
   "keywords": [],
@@ -23,7 +23,8 @@
     "mongoose": "^8.17.1",
     "multer": "^2.0.2",
     "node-cron": "^4.2.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "typescript": "^5.9.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -34,7 +35,6 @@
     "@types/node": "^24.2.1",
     "@types/node-cron": "^3.0.11",
     "nodemon": "^3.1.10",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "ts-node": "^10.9.2"
   }
 }
